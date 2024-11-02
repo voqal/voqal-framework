@@ -2,8 +2,10 @@ plugins {
     alias(libs.plugins.kotlin.multiplatform)
 }
 
+val projectVersion: String by project
+
 group = "dev.voqal"
-version = "0.1.0-SNAPSHOT"
+version = project.properties["frameworkVersion"] as String? ?: projectVersion
 
 repositories {
     mavenCentral()

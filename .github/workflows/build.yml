@@ -68,6 +68,7 @@ jobs:
       if: github.ref == 'refs/heads/master'
       uses: smartsquaregmbh/delete-old-packages@v0.8.1
       with:
+        type: maven
         keep: 0
         version-pattern: "^\\d+\\.\\d+\\.\\d+-SNAPSHOT$"
         names: |

@@ -8,11 +8,6 @@ val projectVersion: String by project
 group = "dev.voqal"
 version = project.properties["frameworkVersion"] as String? ?: projectVersion
 
-//val sourcesJar = tasks.register<Jar>("sourcesJar") {
-//    archiveClassifier.set("sources")
-//    from(project.the<SourceSetContainer>()["main"].allSource)
-//}
-
 configure<PublishingExtension> {
     repositories {
         maven {
@@ -33,9 +28,6 @@ configure<PublishingExtension> {
                 version = project.version.toString()
 
                 from(components["kotlin"])
-
-//                // Ship the sources jar
-//                artifact(sourcesJar)
             }
         }
     }
@@ -50,4 +42,7 @@ dependencies {
 
 kotlin {
     jvm()
+    js {
+        browser()
+    }
 }

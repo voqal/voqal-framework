@@ -1,5 +1,7 @@
 package dev.voqal.utils
 
+import kotlin.jvm.JvmStatic
+
 enum class Iso639Language(val code: String, val displayName: String) {
     AUTO_DETECT("auto", "Auto-detect"),
     AFRIKAANS("af", "Afrikaans"),

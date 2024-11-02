@@ -75,9 +75,6 @@ jobs:
         keep: 0
         version-pattern: "^\\d+\\.\\d+\\.\\d+-SNAPSHOT$"
         names: |
-          dev.voqal.voqal-framework-js
-          dev.voqal.voqal-framework-jvm
-          dev.voqal.voqal-framework
           dev.voqal.assistant-framework
           dev.voqal.assistant-framework-js
           dev.voqal.assistant-framework-jvm

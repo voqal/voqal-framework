@@ -16,12 +16,9 @@ mockito-kotlin = "5.4.0"
 snakeyaml = "2.3"
 jna = "5.15.0"
 guava = "33.3.1-jre"
-coil = "3.0.0-rc01"
 kcef = "2024.04.20.2"
 kotlin-logging-jvm = "7.0.0"
 logback-classic = "1.5.12"
-jewel = "0.26.2"
-components-resources-desktop = "1.7.0"
 
 [libraries]
 vertx-core = { module = "io.vertx:vertx-core", version.ref = "vertx" }
@@ -32,25 +29,9 @@ ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx
 snakeyaml = { module = "org.yaml:snakeyaml", version.ref = "snakeyaml" }
 jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
-coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
 kcef = { module = "dev.datlag:kcef", version.ref = "kcef" }
 kotlin-logging-jvm = { module = "io.github.oshai:kotlin-logging-jvm", version.ref = "kotlin-logging-jvm" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback-classic" }
-kotlin-scripting-jvm = { module = "org.jetbrains.kotlin:kotlin-scripting-jvm", version.ref = "kotlin" }
-kotlin-scripting-compiler-embeddable = { module = "org.jetbrains.kotlin:kotlin-scripting-compiler-embeddable", version.ref = "kotlin" }
-kotlin-scripting-dependencies = { module = "org.jetbrains.kotlin:kotlin-scripting-dependencies", version.ref = "kotlin" }
-kotlin-script-runtime = { module = "org.jetbrains.kotlin:kotlin-script-runtime", version.ref = "kotlin" }
-kotlin-scripting-jsr223 = { module = "org.jetbrains.kotlin:kotlin-scripting-jsr223", version.ref = "kotlin" }
-kotlin-compiler-embeddable = { module = "org.jetbrains.kotlin:kotlin-compiler-embeddable", version.ref = "kotlin" }
-jewel-int-ui-standalone = { module = "org.jetbrains.jewel:jewel-int-ui-standalone-241", version.ref = "jewel" }
-jewel-int-ui-decorated-window = { module = "org.jetbrains.jewel:jewel-int-ui-decorated-window-241", version.ref = "jewel" }
-jewel-markdown-int-ui-standalone-styling = { module = "org.jetbrains.jewel:jewel-markdown-int-ui-standalone-styling-241", version.ref = "jewel" }
-jewel-markdown-extension-autolink = { module = "org.jetbrains.jewel:jewel-markdown-extension-autolink-241", version.ref = "jewel" }
-jewel-markdown-extension-gfm-alerts = { module = "org.jetbrains.jewel:jewel-markdown-extension-gfm-alerts-241", version.ref = "jewel" }
-jewel-markdown-core = { module = "org.jetbrains.jewel:jewel-markdown-core-241", version.ref = "jewel" }
-jewel-markdown-ide-laf-bridge-styling = { module = "org.jetbrains.jewel:jewel-markdown-ide-laf-bridge-styling-241", version.ref = "jewel" }
-jewel-ui = { module = "org.jetbrains.jewel:jewel-ui-241", version.ref = "jewel" }
-components-resources-desktop = { module = "org.jetbrains.compose.components:components-resources-desktop", version.ref = "components-resources-desktop" }
 openai-client = { module = "com.aallam.openai:openai-client", version.ref = "openai-client" }
 jlayer = { module = "javazoom:jlayer", version.ref = "jlayer" }
 jackson-databind = { module = "com.fasterxml.jackson.core:jackson-databind", version.ref = "jackson-databind" }
@@ -66,5 +47,3 @@ mockito-kotlin = { module = "org.mockito.kotlin:mockito-kotlin", version.ref = "
 [plugins]
 kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
 kotlin-multiplatform = { id = "org.jetbrains.kotlin.multiplatform", version.ref = "kotlin" }
-kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
-compose = { id = "org.jetbrains.compose", version = "1.7.0" }

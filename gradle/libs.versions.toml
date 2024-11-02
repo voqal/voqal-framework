@@ -16,7 +16,6 @@ mockito-kotlin = "5.4.0"
 snakeyaml = "2.3"
 jna = "5.15.0"
 guava = "33.3.1-jre"
-kcef = "2024.04.20.2"
 kotlin-logging-jvm = "7.0.0"
 logback-classic = "1.5.12"
 
@@ -29,7 +28,6 @@ ktor-serialization-kotlinx-json = { module = "io.ktor:ktor-serialization-kotlinx
 snakeyaml = { module = "org.yaml:snakeyaml", version.ref = "snakeyaml" }
 jna = { module = "net.java.dev.jna:jna", version.ref = "jna" }
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
-kcef = { module = "dev.datlag:kcef", version.ref = "kcef" }
 kotlin-logging-jvm = { module = "io.github.oshai:kotlin-logging-jvm", version.ref = "kotlin-logging-jvm" }
 logback-classic = { module = "ch.qos.logback:logback-classic", version.ref = "logback-classic" }
 openai-client = { module = "com.aallam.openai:openai-client", version.ref = "openai-client" }

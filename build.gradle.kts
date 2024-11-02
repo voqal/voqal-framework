@@ -3,8 +3,10 @@ plugins {
     id("maven-publish")
 }
 
+val projectVersion: String by project
+
 group = "dev.voqal"
-version = "1.0-SNAPSHOT"
+version = project.properties["frameworkVersion"] as String? ?: projectVersion
 
 //val sourcesJar = tasks.register<Jar>("sourcesJar") {
 //    archiveClassifier.set("sources")

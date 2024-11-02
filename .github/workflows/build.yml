@@ -1,0 +1,81 @@
+name: Build framework
+
+on:
+  push:
+    branches: [ master ]
+    paths-ignore:
+      - '**.md'
+      - '**.svg'
+  pull_request:
+    branches: [ master ]
+    paths-ignore:
+      - '**.md'
+      - '**.svg'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: gradle
+
+    - name: Export Properties
+      id: properties
+      shell: bash
+      run: |
+        PROPERTIES="$(./gradlew properties --console=plain -q)"
+        VERSION="$(echo "$PROPERTIES" | grep "^version:" | cut -f2- -d ' ')"
+        echo "::set-output name=version::$VERSION"
+        echo "VOQAL_FRAMEWORK_VERSION=$VERSION" >> $GITHUB_ENV
+        echo "VOQAL_RELEASE_VERSION=${VERSION/-SNAPSHOT/}" >> $GITHUB_ENV
+
+    - name: Build with Gradle
+      run: ./gradlew build
+
+    - name: Remove Old Release Drafts
+      if: github.ref == 'refs/heads/master'
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        curl -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/repos/$GITHUB_REPOSITORY/releases \
+          | tr '\r\n' ' ' \
+          | jq '.[] | select(.draft == true) | .id' \
+          | xargs -I '{}' \
+        curl -X DELETE -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/repos/$GITHUB_REPOSITORY/releases/{}
+
+    - name: Create Release Draft
+      if: github.ref == 'refs/heads/master'
+      id: createDraft
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ env.VOQAL_RELEASE_VERSION }}
+        release_name: v${{ env.VOQAL_RELEASE_VERSION }}
+        draft: true
+
+    - name: Remove Old Snapshot Packages
+      if: github.ref == 'refs/heads/master'
+      uses: smartsquaregmbh/delete-old-packages@v0.6.0
+      with:
+        keep: 0
+        version-pattern: "^\\d+\\.\\d+\\.\\d+-SNAPSHOT$"
+        names: |
+          plus.sourceplus.protocol
+
+    - name: Publish New Snapshot Packages
+      if: github.ref == 'refs/heads/master'
+      run: ./gradlew publish
+      env:
+        GH_PUBLISH_USERNAME: $GITHUB_ACTOR
+        GH_PUBLISH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -75,9 +75,9 @@ jobs:
         keep: 0
         version-pattern: "^\\d+\\.\\d+\\.\\d+-SNAPSHOT$"
         names: |
-          dev.voqal.assistant-framework
-          dev.voqal.assistant-framework-js
-          dev.voqal.assistant-framework-jvm
+          dev.voqal.voqal-assistant-framework
+          dev.voqal.voqal-assistant-framework-js
+          dev.voqal.voqal-assistant-framework-jvm
 
     - name: Publish New Snapshot Packages
       if: github.ref == 'refs/heads/master'

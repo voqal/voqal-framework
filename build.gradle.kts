@@ -44,5 +44,6 @@ kotlin {
     jvm()
     js {
         browser()
+        binaries.executable()
     }
 }

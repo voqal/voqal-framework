@@ -17,4 +17,13 @@ kotlin {
         browser()
         binaries.executable()
     }
+
+    sourceSets {
+        val jvmMain by getting {
+            dependencies {
+                implementation("org.slf4j:slf4j-api:2.0.16")
+                implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.9.0")
+            }
+        }
+    }
 }

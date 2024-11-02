@@ -19,18 +19,6 @@ configure<PublishingExtension> {
             }
         }
     }
-//
-//    publishing {
-//        publications {
-//            create<MavenPublication>("maven") {
-//                groupId = project.group.toString()
-//                artifactId = "assistant-framework"
-//                version = project.version.toString()
-//
-//                from(components["kotlin"])
-//            }
-//        }
-//    }
 }
 
 repositories {

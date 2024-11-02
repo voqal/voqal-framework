@@ -71,7 +71,7 @@ jobs:
         keep: 0
         version-pattern: "^\\d+\\.\\d+\\.\\d+-SNAPSHOT$"
         names: |
-          plus.sourceplus.protocol
+          dev.voqal.framework
 
     - name: Publish New Snapshot Packages
       if: github.ref == 'refs/heads/master'

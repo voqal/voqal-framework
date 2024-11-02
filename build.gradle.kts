@@ -41,6 +41,9 @@ kotlin {
         val jvmMain by getting {
             dependencies {
                 implementation(libs.openai.client)
+                implementation(libs.vertx.core)
+                implementation(libs.ktor.client.content.negotiation)
+                implementation(libs.ktor.serialization.kotlinx.json)
             }
         }
     }

@@ -11,6 +11,10 @@ repositories {
     mavenCentral()
 }
 
+dependencies {
+    commonMainApi("io.github.oshai:kotlin-logging:7.0.0")
+}
+
 kotlin {
     jvm()
     js {

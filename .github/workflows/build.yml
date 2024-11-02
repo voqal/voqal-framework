@@ -42,27 +42,27 @@ jobs:
     - name: Build with Gradle
       run: ./gradlew build
 
-    - name: Remove Old Release Drafts
-      if: github.ref == 'refs/heads/master'
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        curl -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/repos/$GITHUB_REPOSITORY/releases \
-          | tr '\r\n' ' ' \
-          | jq '.[] | select(.draft == true) | .id' \
-          | xargs -I '{}' \
-        curl -X DELETE -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/repos/$GITHUB_REPOSITORY/releases/{}
-
-    - name: Create Release Draft
-      if: github.ref == 'refs/heads/master'
-      id: createDraft
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ env.VOQAL_RELEASE_VERSION }}
-        release_name: v${{ env.VOQAL_RELEASE_VERSION }}
-        draft: true
+#    - name: Remove Old Release Drafts
+#      if: github.ref == 'refs/heads/master'
+#      env:
+#        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#      run: |
+#        curl -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/repos/$GITHUB_REPOSITORY/releases \
+#          | tr '\r\n' ' ' \
+#          | jq '.[] | select(.draft == true) | .id' \
+#          | xargs -I '{}' \
+#        curl -X DELETE -H "Authorization: Bearer $GITHUB_TOKEN" https://api.github.com/repos/$GITHUB_REPOSITORY/releases/{}
+#
+#    - name: Create Release Draft
+#      if: github.ref == 'refs/heads/master'
+#      id: createDraft
+#      uses: actions/create-release@v1
+#      env:
+#        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+#      with:
+#        tag_name: ${{ env.VOQAL_RELEASE_VERSION }}
+#        release_name: v${{ env.VOQAL_RELEASE_VERSION }}
+#        draft: true
 
     - name: Remove Old Snapshot Packages
       if: github.ref == 'refs/heads/master'

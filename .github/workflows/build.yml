@@ -16,8 +16,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      packages: write
+    permissions: write-all
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true
@@ -65,17 +64,20 @@ jobs:
 #        tag_name: ${{ env.VOQAL_RELEASE_VERSION }}
 #        release_name: v${{ env.VOQAL_RELEASE_VERSION }}
 #        draft: true
-#
-#    - name: Remove Old Snapshot Packages
-#      if: github.ref == 'refs/heads/master'
-#      uses: smartsquaregmbh/delete-old-packages@v0.8.1
-#      with:
-#        organization: voqal
-#        type: maven
-#        keep: 0
-#        version-pattern: "^\\d+\\.\\d+\\.\\d+-SNAPSHOT$"
-#        names: |
-#          dev.voqal
+
+    - name: Remove Old Snapshot Packages
+      if: github.ref == 'refs/heads/master'
+      uses: smartsquaregmbh/delete-old-packages@v0.8.1
+      with:
+        organization: voqal
+        type: maven
+        keep: 0
+        version-pattern: "^\\d+\\.\\d+\\.\\d+-SNAPSHOT$"
+        names: |
+          dev.voqal.voqal-framework
+          dev.voqal.assistant-framework
+          dev.voqal.voqal-framework-jvm
+          dev.voqal.voqal-framework-js
 
     - name: Publish New Snapshot Packages
       if: github.ref == 'refs/heads/master'

@@ -14,8 +14,9 @@ configure<PublishingExtension> {
             name = "GitHubPackages"
             url = uri("https://maven.pkg.github.com/voqal/assistant-framework")
             credentials {
-                username = null //System.getenv("GH_PUBLISH_USERNAME")?.toString()
-                password = null //System.getenv("GH_PUBLISH_TOKEN")?.toString()
+                println("username: " + System.getenv("GH_PUBLISH_USERNAME")?.toString())
+                username = System.getenv("GH_PUBLISH_USERNAME")?.toString()
+                password = System.getenv("GH_PUBLISH_TOKEN")?.toString()
             }
         }
     }

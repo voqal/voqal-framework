@@ -27,6 +27,7 @@ repositories {
 
 dependencies {
     commonMainCompileOnly(project(":intellij-delegate"))
+    commonMainApi(project(":intellij-delegate"))
 }
 
 kotlin {

@@ -26,8 +26,6 @@ repositories {
 }
 
 dependencies {
-    commonMainCompileOnly(project(":intellij-delegate"))
-    commonMainApi(project(":intellij-delegate"))
 }
 
 kotlin {
@@ -40,10 +38,19 @@ kotlin {
     sourceSets {
         val jvmMain by getting {
             dependencies {
-                implementation(libs.openai.client)
-                implementation(libs.vertx.core)
-                implementation(libs.ktor.client.content.negotiation)
-                implementation(libs.ktor.serialization.kotlinx.json)
+                compileOnly(project(":intellij-delegate"))
+
+                compileOnly(libs.openai.client)
+                compileOnly(libs.vertx.core)
+                compileOnly(libs.ktor.client.content.negotiation)
+                compileOnly(libs.ktor.serialization.kotlinx.json)
+                compileOnly(libs.pebble)
+                compileOnly(libs.libfvad.jni)
+                compileOnly(libs.vertexai)
+                compileOnly(libs.commons.lang3)
+                compileOnly(libs.commons.io)
+                compileOnly(libs.jna)
+                compileOnly(libs.snakeyaml)
             }
         }
     }

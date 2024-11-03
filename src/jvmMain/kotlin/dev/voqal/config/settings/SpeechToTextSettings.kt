@@ -3,6 +3,7 @@ package dev.voqal.config.settings
 import dev.voqal.config.ConfigurableSettings
 import dev.voqal.utils.Iso639Language
 import io.vertx.core.json.JsonObject
+import java.io.File
 
 data class SpeechToTextSettings(
     val provider: STTProvider = STTProvider.NONE,
@@ -12,7 +13,8 @@ data class SpeechToTextSettings(
     val modelName: String = "whisper-1",
     val queryParams: String = "",
     val language: Iso639Language = Iso639Language.ENGLISH,
-    val streamAudio: Boolean = true
+    val streamAudio: Boolean = true,
+    val speechDir: File = File(System.getProperty("java.io.tmpdir"), "speech")
 ) : ConfigurableSettings {
 
     /**
@@ -26,7 +28,8 @@ data class SpeechToTextSettings(
         modelName = json.getString("modelName", "whisper-1"),
         queryParams = json.getString("queryParams", ""),
         language = Iso639Language.findByCode(json.getString("language", Iso639Language.ENGLISH.code)),
-        streamAudio = json.getBoolean("streamAudio", true)
+        streamAudio = json.getBoolean("streamAudio", true),
+        speechDir = File(json.getString("speechDir", File(System.getProperty("java.io.tmpdir"), "speech").absolutePath))
     )
 
     override fun toJson(): JsonObject {
@@ -39,6 +42,7 @@ data class SpeechToTextSettings(
             put("queryParams", queryParams)
             put("language", language.code)
             put("streamAudio", streamAudio)
+            put("speechDir", speechDir.absolutePath)
         }
     }
 
@@ -52,7 +56,8 @@ data class SpeechToTextSettings(
     override fun withPiiRemoved(): SpeechToTextSettings {
         return withKeysRemoved().copy(
             providerUrl = if (providerUrl == "") "" else "***",
-            queryParams = if (queryParams == "") "" else "***"
+            queryParams = if (queryParams == "") "" else "***",
+            speechDir = File("***")
         )
     }
 

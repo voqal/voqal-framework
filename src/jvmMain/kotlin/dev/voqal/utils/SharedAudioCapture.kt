@@ -10,7 +10,6 @@ import dev.voqal.services.*
 import dev.voqal.utils.SharedAudioCapture.AudioDetection.Companion.PRE_SPEECH_BUFFER_SIZE
 import dev.voqal.utils.SharedAudioSystem.SharedAudioLine
 import kotlinx.coroutines.*
-import voqal.services.ChatToolWindowContentManager
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.io.File
@@ -341,7 +340,7 @@ class SharedAudioCapture(private val project: Project) {
                         val audioLengthMs = (mergedAudio.size.toDouble() / FORMAT.frameSize) * 1000.0 / SAMPLE_RATE
                         log.debug { "Speech audio length: ${audioLengthMs}ms" }
 
-                        val speechDir: File = TODO()// = File(settings.installDir, "speech")
+                        val speechDir = project.service<VoqalConfigService>().getConfig().speechToTextSettings.speechDir
                         speechDir.mkdirs()
                         val speechId = aiProvider.asVadProvider().speechId
                         val speechFile = File(speechDir, "developer-$speechId.wav")

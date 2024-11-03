@@ -12,7 +12,7 @@ import kotlinx.serialization.json.*
  * Handles developer transcriptions, transforming them into Voqal directives, executing them, and handling the
  * resulting responses.
  */
-interface  VoqalDirectiveService {
+interface VoqalDirectiveService {
 
     companion object {
         fun convertJsonElementToMap(jsonElement: JsonElement): Any? = when (jsonElement) {
@@ -61,7 +61,7 @@ interface  VoqalDirectiveService {
         promptName: String = "Idle Mode"
     ): VoqalDirective
 
-    suspend fun executeDirective(directive: VoqalDirective)
+    suspend fun executeDirective(directive: VoqalDirective, addMessage: Boolean = true)
 
     suspend fun handleResponse(
         input: String,

@@ -1,11 +1,11 @@
 package dev.voqal.assistant
 
 import com.intellij.openapi.components.service
+import com.intellij.openapi.project.Project
 import dev.voqal.assistant.context.AssistantContext
 import dev.voqal.assistant.context.DeveloperContext
 import dev.voqal.assistant.context.UserContext
 import dev.voqal.assistant.template.VoqalTemplateEngine
-import com.intellij.openapi.project.Project
 import dev.voqal.config.settings.LanguageModelSettings
 import dev.voqal.services.VoqalConfigService
 import dev.voqal.services.VoqalDirectiveService
@@ -14,7 +14,7 @@ import kotlinx.serialization.json.Json
 import java.io.StringWriter
 
 /**
- * Represents a processable command for the Voqal Browser.
+ * Represents a processable command for Voqal.
  *
  * @property assistant Holds the current configuration of the assistant.
  * @property developer Holds information provided by developer.
@@ -23,7 +23,7 @@ data class VoqalDirective(
     val project: Project,
     val assistant: AssistantContext,
     val developer: DeveloperContext,
-    val user: UserContext
+    val user: UserContext? = null
 ) {
 
     val requestId by lazy { assistant.memorySlice.id }
@@ -52,9 +52,11 @@ data class VoqalDirective(
         val developerMap = VoqalDirectiveService.convertJsonElementToMap(
             Json.parseToJsonElement(developer.toJson().toString())
         )
-        val userMap = VoqalDirectiveService.convertJsonElementToMap(
-            Json.parseToJsonElement(user.toJson().toString())
-        )
+        val userMap = user?.let {
+            VoqalDirectiveService.convertJsonElementToMap(
+                Json.parseToJsonElement(it.toJson().toString())
+            )
+        }
         val contextMap = mutableMapOf(
             "assistant" to assistantMap,
             "developer" to developerMap,
@@ -101,8 +103,8 @@ data class VoqalDirective(
     fun toJson(): JsonObject {
         return JsonObject().apply {
             put("assistant", assistant.toJson(this@VoqalDirective))
+            user?.let { put("user", it.toJson()) }
             put("developer", developer.toJson())
-            put("user", user.toJson())
         }
     }
 

@@ -13,7 +13,8 @@ import java.util.jar.JarFile
 object NativesExtractor {
 
     private var nativesExtracted = false
-    val workingDirectory: File = TODO()// = File(settings.installDir, "picovoice")
+    //todo: this is nativesDirectory, make /tmp/voqal the working directory
+    var workingDirectory = File(File(System.getProperty("java.io.tmpdir")), "voqal-natives")
 
     fun getMacArchitecture(): String {
         val arch = System.getProperty("os.arch")
@@ -39,8 +40,9 @@ object NativesExtractor {
             return
         } catch (_: Exception) {
         }
-        if (!workingDirectory.exists()) {
-            workingDirectory.mkdirs()
+        val tmpDir = File(File(System.getProperty("java.io.tmpdir")), "voqal-natives")
+        if (!tmpDir.exists()) {
+            tmpDir.mkdirs()
         }
 
         TODO()
@@ -51,7 +53,7 @@ object NativesExtractor {
 //                val file = enumEntries.nextElement() as JarEntry
 //                if (!file.name.startsWith("natives")) continue
 //
-//                val f = File(workingDirectory, file.name.substringAfter("natives/"))
+//                val f = File(tmpDir, file.name.substringAfter("natives/"))
 //                if (f.exists() && f.isFile) {
 //                    log.trace("Deleting existing file: $f")
 //                    f.delete()

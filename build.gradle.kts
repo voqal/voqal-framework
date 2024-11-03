@@ -23,6 +23,7 @@ configure<PublishingExtension> {
 
 repositories {
     mavenCentral()
+    maven("https://s01.oss.sonatype.org/content/repositories/releases/")
 }
 
 dependencies {
@@ -51,6 +52,7 @@ kotlin {
                 compileOnly(libs.commons.io)
                 compileOnly(libs.jna)
                 compileOnly(libs.snakeyaml)
+                compileOnly("io.github.funnysaltyfish:partial-json-parser:1.0.2")
             }
         }
     }

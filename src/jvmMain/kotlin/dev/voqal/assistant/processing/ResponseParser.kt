@@ -3,6 +3,9 @@ package dev.voqal.assistant.processing
 import com.aallam.openai.api.chat.*
 import dev.voqal.assistant.VoqalDirective
 import dev.voqal.assistant.VoqalResponse
+import dev.voqal.assistant.flaw.error.VoqalError
+import dev.voqal.assistant.flaw.error.parse.ResponseParseError
+import dev.voqal.services.VoqalToolService
 import dev.voqal.services.getVoqalLogger
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
@@ -14,6 +17,57 @@ import java.util.regex.Pattern
  * Parses the wide variety of responses given by LLMs and returns the appropriate tool calls.
  */
 object ResponseParser {
+
+//    fun parseEditMode(
+//        chunk: ChatCompletionChunk,
+//        directive: VoqalDirective
+//    ): VoqalResponse {
+//        return parseEditMode(
+//            ChatCompletion(
+//                id = chunk.id,
+//                created = chunk.created.toLong(),
+//                model = chunk.model,
+//                choices = chunk.choices.map { it.toChatChoice() },
+//                usage = chunk.usage,
+//                systemFingerprint = chunk.systemFingerprint
+//            ), directive
+//        )
+//    }
+//
+//    private fun ChatChunk.toChatChoice(): ChatChoice {
+//        return ChatChoice(
+//            index = 0,
+//            message = ChatMessage(
+//                role = this.delta!!.role!!,
+//                messageContent = TextContent(this.delta!!.content!! + "\n```")
+//            )
+//        )
+//    }
+//
+//    fun parseEditMode(
+//        completion: ChatCompletion,
+//        directive: VoqalDirective
+//    ): VoqalResponse {
+//        val messageContent = completion.choices.firstOrNull()?.message?.messageContent
+//        val textContent = if (messageContent is TextContent) {
+//            messageContent.content
+//        } else {
+//            messageContent.toString()
+//        }
+//        val codeBlock = CodeExtractor.extractCodeBlock(textContent, false)
+//
+//        return VoqalResponse(
+//            directive, listOf(
+//                ToolCall.Function(
+//                    id = ToolId(EditTextTool.NAME),
+//                    function = FunctionCall(
+//                        nameOrNull = EditTextTool.NAME,
+//                        argumentsOrNull = JsonObject().put("text", codeBlock).toString()
+//                    )
+//                )
+//            ), completion
+//        )
+//    }
 
     fun parse(
         completion: ChatCompletion,
@@ -131,7 +185,8 @@ object ResponseParser {
                                             )
                                         )
                                     } else {
-                                        throw Exception(
+                                        throw ResponseParseError(
+                                            completion,
                                             "Unable to find tool: ${json.map.keys.first()}"
                                         )
                                     }
@@ -141,11 +196,14 @@ object ResponseParser {
                             }
 
                             //todo: can save custom property to helicone for easier tracking
-                            throw Exception(
+                            throw ResponseParseError(
+                                completion,
                                 "Unable to find tool: ${json.map.keys.first()}"
                             )
                         }
                     }
+                } catch (e: VoqalError) {
+                    throw e
                 } catch (_: Exception) {
                     if (looksLikeRawDirectiveArray(message.content!!)) {
                         val jsonArray = try {
@@ -170,48 +228,115 @@ object ResponseParser {
                             .replace("\\r\\n", "\n")
                             .replace("\\n", "\n")
                             .replace("\\\"", "\"")
-
                         try {
-                            val jsonArray = JsonArray(rawJson)
-                            val toolCalls = jsonArray.map {
-                                val tool = it as JsonObject
-                                val name = tool.fieldNames().first()
-                                ToolCall.Function(
-                                    id = ToolId(name),
-                                    function = FunctionCall(
-                                        nameOrNull = name,
-                                        argumentsOrNull = tool.getJsonObject(name).toString()
+//                            val jsonObject = JsonObject(rawJson)
+//                            val toolCalls = listOf(
+//                                ToolCall.Function(
+//                                    id = ToolId(AnswerQuestionTool.NAME),
+//                                    function = FunctionCall(
+//                                        nameOrNull = AnswerQuestionTool.NAME,
+//                                        argumentsOrNull = JsonObject().apply {
+//                                            put("answer", jsonObject.getString("answer"))
+//                                        }.toString()
+//                                    )
+//                                )
+//                            )
+//                            return VoqalResponse(directive, toolCalls, completion)
+                        } catch (_: Exception) {
+                            try {
+                                val jsonArray = JsonArray(rawJson)
+                                val toolCalls = jsonArray.map {
+                                    val tool = it as JsonObject
+                                    val name = tool.fieldNames().first()
+                                    ToolCall.Function(
+                                        id = ToolId(name),
+                                        function = FunctionCall(
+                                            nameOrNull = name,
+                                            argumentsOrNull = tool.getJsonObject(name).toString()
+                                        )
                                     )
+                                }
+                                return VoqalResponse(directive, toolCalls, completion)
+                            } catch (e: Exception) {
+                                throw ResponseParseError(
+                                    completion,
+                                    e.message ?: "Failed to parse language model response"
                                 )
                             }
-                            return VoqalResponse(directive, toolCalls, completion)
-                        } catch (e: Exception) {
-                            throw Exception(
-                                e.message ?: "Failed to parse language model response"
-                            )
                         }
+                    } else if (looksLikeRawAnswerYaml(message.content!!)) {
+                        try {
+//                            val rawYaml = message.content!!.substringAfter("```yaml").substringBefore("```")
+//                                .replace("\\r\\n", "\n")
+//                                .replace("\\n", "\n")
+//                                .replace("\\\"", "\"")
+//                            val parse = VoqalToolService.parseYaml(rawYaml)
+//                            val toolCalls = listOf(
+//                                ToolCall.Function(
+//                                    id = ToolId(AnswerQuestionTool.NAME),
+//                                    function = FunctionCall(
+//                                        nameOrNull = AnswerQuestionTool.NAME,
+//                                        argumentsOrNull = JsonObject().apply {
+//                                            put("answer", parse["answer"])
+//                                        }.toString()
+//                                    )
+//                                )
+//                            )
+//                            return VoqalResponse(directive, toolCalls, completion)
+                        } catch (_: Exception) {
+                        }
+                    } else if (looksLikeAnswerQuestion(message.content!!)) {
+//                        val toolCalls = listOf(
+//                            ToolCall.Function(
+//                                id = ToolId(AnswerQuestionTool.NAME),
+//                                function = FunctionCall(
+//                                    nameOrNull = AnswerQuestionTool.NAME,
+//                                    argumentsOrNull = JsonObject().apply {
+//                                        put("answer", message.content)
+//                                    }.toString()
+//                                )
+//                            )
+//                        )
+//                        return VoqalResponse(directive, toolCalls, completion)
                     } else {
-                        //default to TTS
-                        return VoqalResponse(
-                            directive,
-                            listOf(
-                                ToolCall.Function(
-                                    id = ToolId("tts"),
-                                    function = FunctionCall(
-                                        nameOrNull = "tts",
-                                        argumentsOrNull = JsonObject().apply {
-                                            put("text", message.content)
-                                        }.toString()
-                                    )
-                                )
-                            ), completion
+                        throw ResponseParseError(
+                            completion,
+                            "Failed to parse language model response"
                         )
                     }
                 }
+            } else {
+//                log.warn("Got message content and tool calls. Dropping tool calls and using message content as answer")
+//                val toolCalls = listOf(
+//                    ToolCall.Function(
+//                        id = (message.toolCalls!!.first() as ToolCall.Function).id,
+//                        function = FunctionCall(
+//                            nameOrNull = AnswerQuestionTool.NAME,
+//                            argumentsOrNull = message.content
+//                        )
+//                    )
+//                )
+//                return VoqalResponse(directive, toolCalls, completion)
             }
         }
 
         return VoqalResponse(directive, message.toolCalls ?: emptyList(), completion)
+    }
+
+    private fun looksLikeAnswerQuestion(input: String): Boolean {
+        val hasVowels = input.any { it in "aeiouAEIOU" }
+        val hasSpaces = input.contains(" ")
+        val hasMultipleWords = input.split("\\s+".toRegex()).size > 1
+        return hasVowels && hasSpaces && hasMultipleWords
+    }
+
+    private fun looksLikeRawAnswerYaml(input: String): Boolean {
+        if (!input.startsWith("```yaml") || !input.endsWith("```")) {
+            return false
+        } else if (!input.contains("answer:")) {
+            return false
+        }
+        return true
     }
 
     private fun looksLikeRawAnswerJson(input: String): Boolean {
@@ -228,13 +353,5 @@ object ResponseParser {
                 false
             }
         }
-    }
-
-    fun parseEditMode(updatedChunk: ChatCompletionChunk, directive: VoqalDirective): VoqalResponse {
-        TODO("Not yet implemented")
-    }
-
-    fun parseEditMode(updatedChunk: ChatCompletion, directive: VoqalDirective): VoqalResponse {
-        TODO("Not yet implemented")
     }
 }

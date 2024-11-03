@@ -1,5 +1,7 @@
 package dev.voqal.assistant.processing
 
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import io.vertx.core.json.JsonObject
 import java.util.regex.Pattern
 

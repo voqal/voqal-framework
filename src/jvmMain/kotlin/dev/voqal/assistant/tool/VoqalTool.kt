@@ -4,6 +4,7 @@ import com.aallam.openai.api.chat.FunctionCall
 import com.aallam.openai.api.chat.Tool
 import com.intellij.openapi.project.Project
 import dev.voqal.assistant.VoqalDirective
+import dev.voqal.assistant.focus.DetectedIntent
 import dev.voqal.assistant.focus.SpokenTranscript
 import io.vertx.core.json.JsonObject
 
@@ -18,4 +19,6 @@ abstract class VoqalTool {
     open fun isVisible(directive: VoqalDirective): Boolean = true
     open fun supportsDirectiveMode(): Boolean = false
     open fun canShortcut(project: Project, call: FunctionCall): Boolean = false
+    open suspend fun getTranscriptIntent(project: Project, transcript: SpokenTranscript): DetectedIntent? = null
+    open val manualConfirm: Boolean = false
 }

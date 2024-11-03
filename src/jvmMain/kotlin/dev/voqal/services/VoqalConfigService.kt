@@ -5,12 +5,18 @@ import dev.voqal.config.ConfigurableSettings
 import dev.voqal.config.VoqalConfig
 import dev.voqal.config.settings.*
 import dev.voqal.provider.AiProvider
+import dev.voqal.utils.SharedAudioCapture
+import kotlinx.coroutines.CoroutineScope
 import org.jetbrains.annotations.VisibleForTesting
 
 /**
  * Holds the project's current configuration.
  */
 interface VoqalConfigService {
+
+    fun getScope(): CoroutineScope
+
+    fun getSharedAudioCapture(): SharedAudioCapture
 
     fun onConfigChange(
         disposable: Disposable? = null,

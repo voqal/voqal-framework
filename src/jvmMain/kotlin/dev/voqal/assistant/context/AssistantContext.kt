@@ -14,7 +14,7 @@ import org.yaml.snakeyaml.Yaml
 import java.io.StringWriter
 
 /**
- * Represents the internal context of the Voqal Assistant.
+ * Represents the internal context of the Voqal Coder.
  */
 data class AssistantContext(
     val memorySlice: MemorySlice,
@@ -32,13 +32,13 @@ data class AssistantContext(
     fun toJson(directive: VoqalDirective): JsonObject {
         return JsonObject().apply {
             put("includeToolsInMarkdown", promptSettings?.functionCalling == PromptSettings.FunctionCalling.MARKDOWN)
-//            put("availableTools", getVisibleTools(directive, availableActions))
+            put("availableTools", getVisibleTools(directive, availableActions))
             put("speechId", speechId)
             put("usingAudioModality", usingAudioModality)
             put("includeSystemPrompt", includeSystemPrompt)
             put("directiveMode", directiveMode)
             promptSettings?.let { put("promptSettings", it.toJson()) }
-//            parentDirective?.let { put("parentDirective", it.toJson()) }
+            parentDirective?.let { put("parentDirective", it.toJson()) }
             output?.let { put("output", it) }
         }
     }

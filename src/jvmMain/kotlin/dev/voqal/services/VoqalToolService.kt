@@ -2,13 +2,12 @@ package dev.voqal.services
 
 import com.aallam.openai.api.chat.ToolCall
 import dev.voqal.assistant.VoqalResponse
-import dev.voqal.assistant.focus.SpokenTranscript
-import io.vertx.core.json.JsonObject
+import dev.voqal.assistant.tool.VoqalTool
 import org.yaml.snakeyaml.Yaml
 import java.io.StringReader
 import java.util.regex.Matcher
 
-interface  VoqalToolService {
+interface VoqalToolService {
 
     companion object {
         fun fixIllegalDollarEscape(jsonString: String): String {
@@ -23,7 +22,7 @@ interface  VoqalToolService {
         }
     }
 
-//    fun getAvailableTools() = availableToolsMap
+    fun getAvailableTools(): Map<String, VoqalTool>
 //
 //    suspend fun intentCheck(spokenTranscript: SpokenTranscript): DetectedIntent?
 //
@@ -34,5 +33,7 @@ interface  VoqalToolService {
 //        memoryId: String? = null
 //    )
 
-    suspend fun handleFunctionCall(toolCall: ToolCall.Function, response: VoqalResponse)
+    suspend fun handleFunctionCall(toolCall: ToolCall.Function, response: VoqalResponse): Any?
+
+    fun executeTool(args: String?, voqalTool: VoqalTool, onFinish: suspend (Any?) -> Unit)
 }

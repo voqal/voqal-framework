@@ -4,8 +4,8 @@ import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.chat.ToolCall
 import com.aallam.openai.api.exception.OpenAIAPIException
 import com.aallam.openai.api.exception.OpenAIServerException
-import dev.voqal.assistant.VoqalResponse
 import com.intellij.openapi.project.Project
+import dev.voqal.assistant.VoqalResponse
 import dev.voqal.provider.ObservabilityProvider
 import dev.voqal.services.getVoqalLogger
 import dev.voqal.services.warnChat
@@ -67,20 +67,20 @@ class HeliconeClient(
         var responseJson = response.backingResponse?.let { JsonObject(Json.encodeToJsonElement(it).toString()).map }
         if (responseJson == null && response.exception is OpenAIServerException) {
             responseJson = mutableMapOf<String, Any>().apply {
-                val json = ((response.exception as OpenAIServerException).cause as ServerResponseException).response.bodyAsText()
+                val json = (response.exception.cause as ServerResponseException).response.bodyAsText()
                 JsonObject(json).map.forEach {
                     put(it.key, it.value)
                 }
             }
         } else if (responseJson == null && response.exception is OpenAIAPIException) {
             responseJson = mutableMapOf<String, Any>().apply {
-                if ((response.exception as OpenAIAPIException).cause is ClientRequestException) {
-                    val json = ((response.exception as OpenAIAPIException).cause as ClientRequestException).response.bodyAsText()
+                if (response.exception.cause is ClientRequestException) {
+                    val json = (response.exception.cause as ClientRequestException).response.bodyAsText()
                     JsonObject(json).map.forEach {
                         put(it.key, it.value)
                     }
                 } else {
-                    val json = ((response.exception as OpenAIAPIException).cause as IllegalStateException).message
+                    val json = (response.exception.cause as IllegalStateException).message
                     JsonObject(json).map.forEach {
                         put(it.key, it.value)
                     }

@@ -4,10 +4,9 @@ import com.aallam.openai.api.audio.SpeechRequest
 import com.aallam.openai.api.exception.AuthenticationException
 import com.aallam.openai.api.exception.OpenAIError
 import com.aallam.openai.api.exception.OpenAIErrorDetails
-import dev.voqal.assistant.focus.SpokenTranscript
-import com.intellij.openapi.ThreadingAssertions
-import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
+import com.intellij.util.concurrency.ThreadingAssertions
+import dev.voqal.assistant.focus.SpokenTranscript
 import dev.voqal.config.settings.SpeechToTextSettings.STTProvider
 import dev.voqal.provider.SttProvider
 import dev.voqal.provider.TtsProvider

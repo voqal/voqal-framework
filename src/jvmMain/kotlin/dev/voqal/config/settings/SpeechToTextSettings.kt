@@ -14,7 +14,7 @@ data class SpeechToTextSettings(
     val queryParams: String = "",
     val language: Iso639Language = Iso639Language.ENGLISH,
     val streamAudio: Boolean = true,
-    val speechDir: File = File(System.getProperty("java.io.tmpdir"), "speech")
+    val speechDir: String = File(System.getProperty("java.io.tmpdir"), "speech").absolutePath
 ) : ConfigurableSettings {
 
     /**
@@ -29,7 +29,7 @@ data class SpeechToTextSettings(
         queryParams = json.getString("queryParams", ""),
         language = Iso639Language.findByCode(json.getString("language", Iso639Language.ENGLISH.code)),
         streamAudio = json.getBoolean("streamAudio", true),
-        speechDir = File(json.getString("speechDir", File(System.getProperty("java.io.tmpdir"), "speech").absolutePath))
+        speechDir = json.getString("speechDir", File(System.getProperty("java.io.tmpdir"), "speech").absolutePath)
     )
 
     override fun toJson(): JsonObject {
@@ -42,7 +42,7 @@ data class SpeechToTextSettings(
             put("queryParams", queryParams)
             put("language", language.code)
             put("streamAudio", streamAudio)
-            put("speechDir", speechDir.absolutePath)
+            put("speechDir", speechDir)
         }
     }
 
@@ -57,7 +57,7 @@ data class SpeechToTextSettings(
         return withKeysRemoved().copy(
             providerUrl = if (providerUrl == "") "" else "***",
             queryParams = if (queryParams == "") "" else "***",
-            speechDir = File("***")
+            speechDir = if (speechDir == "") "" else "***"
         )
     }
 

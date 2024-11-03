@@ -12,7 +12,6 @@ import com.aallam.openai.api.thread.Thread
 import com.aallam.openai.api.thread.ThreadId
 import com.aallam.openai.api.thread.ThreadRequest
 import com.aallam.openai.api.vectorstore.VectorStoreId
-import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import dev.voqal.assistant.VoqalDirective
 import dev.voqal.assistant.VoqalResponse
@@ -21,6 +20,7 @@ import dev.voqal.assistant.memory.MemorySystem
 import dev.voqal.provider.AssistantProvider
 import dev.voqal.services.VoqalConfigService
 import dev.voqal.services.getVoqalLogger
+import dev.voqal.services.service
 import io.vertx.core.json.JsonObject
 import kotlinx.coroutines.delay
 import java.util.*
@@ -100,7 +100,7 @@ class ThreadMemorySystem(
 //            content = systemMessage.content
 //            role = systemMessage.role
 //        })
-        val userMessage = ChatMessage(ChatRole.User, directive.developer.transcription)
+        val userMessage = ChatMessage(ChatRole.User, "directive.developer.transcription") //todo: this
         assistantProvider.message(ThreadId(threadId), messageRequest {
             content = userMessage.content
             role = userMessage.role

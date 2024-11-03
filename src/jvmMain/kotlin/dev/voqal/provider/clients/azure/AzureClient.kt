@@ -4,14 +4,13 @@ import com.aallam.openai.api.chat.ChatCompletion
 import com.aallam.openai.api.chat.ChatCompletionChunk
 import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.exception.*
-import dev.voqal.assistant.VoqalDirective
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
+import dev.voqal.assistant.VoqalDirective
 import dev.voqal.provider.LlmProvider
 import dev.voqal.provider.StmProvider
 import dev.voqal.provider.clients.openai.RealtimeSession
-import dev.voqal.services.audioCapture
-import dev.voqal.services.getVoqalLogger
+import dev.voqal.services.*
 import dev.voqal.utils.SharedAudioCapture
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -85,16 +84,16 @@ open class AzureClient(
     }
 
     override suspend fun chatCompletion(request: ChatCompletionRequest, directive: VoqalDirective?): ChatCompletion {
-//        if (realtimeSession != null) {
-//            return realtimeSession.chatCompletion(request, directive)
-//        }
+        if (realtimeSession != null) {
+            return realtimeSession.chatCompletion(request, directive)
+        }
 
         val requestJson = JsonObject(Json.encodeToJsonElement(request).toString())
-//        val tokenLimit = project.service<VoqalConfigService>().getCurrentLanguageModelSettings().tokenLimit
-//        if (tokenLimit != -1) {
-//            val reqTokenCount = project.service<VoqalContextService>().getTokenCount(requestJson.toString())
-//            requestJson.put("max_tokens", Math.min(4096, tokenLimit - reqTokenCount)) //todo: not hardcode 4096
-//        }
+        val tokenLimit = project.service<VoqalConfigService>().getCurrentLanguageModelSettings().tokenLimit
+        if (tokenLimit != -1) {
+            val reqTokenCount = project.service<VoqalContextService>().getTokenCount(requestJson.toString())
+            requestJson.put("max_tokens", Math.min(4096, tokenLimit - reqTokenCount)) //todo: not hardcode 4096
+        }
 
         val response = try {
             client.post(providerUrl) {
@@ -119,49 +118,43 @@ open class AzureClient(
     override suspend fun streamChatCompletion(
         request: ChatCompletionRequest,
         directive: VoqalDirective?
-    ): Flow<ChatCompletionChunk> {
-//        if (realtimeSession != null) {
-//            return realtimeSession.streamChatCompletion(request, directive)
-//        }
+    ): Flow<ChatCompletionChunk> = flow {
+        val requestJson = JsonObject(Json.encodeToJsonElement(request).toString())
+            .put("stream", true).put("stream_options", JsonObject().put("include_usage", true))
+        try {
+            client.preparePost(providerUrl) {
+                header("Content-Type", "application/json")
+                header("api-key", providerKey) //Azure OpenAI Connection
+                header("Authorization", providerKey) //Serverless
+                header("voqal-model-name", deployment)
+                setBody(requestJson.encode())
+            }.execute { response ->
+                throwIfError(response)
 
-        return flow {
-            val requestJson = JsonObject(Json.encodeToJsonElement(request).toString())
-                .put("stream", true).put("stream_options", JsonObject().put("include_usage", true))
-            try {
-                client.preparePost(providerUrl) {
-                    header("Content-Type", "application/json")
-                    header("api-key", providerKey) //Azure OpenAI Connection
-                    header("Authorization", providerKey) //Serverless
-                    header("voqal-model-name", deployment)
-                    setBody(requestJson.encode())
-                }.execute { response ->
-                    throwIfError(response)
+                var hasError = false
+                val channel: ByteReadChannel = response.body()
+                while (!channel.isClosedForRead) {
+                    val line = channel.readUTF8Line()?.takeUnless { it.isEmpty() } ?: continue
 
-                    var hasError = false
-                    val channel: ByteReadChannel = response.body()
-                    while (!channel.isClosedForRead) {
-                        val line = channel.readUTF8Line()?.takeUnless { it.isEmpty() } ?: continue
+                    if (line == "event: error") {
+                        hasError = true
+                        continue
+                    } else if (hasError) {
+                        val errorJson = JsonObject(line.substringAfter("data: "))
+                        log.warn("Received error while streaming completions: $errorJson")
 
-                        if (line == "event: error") {
-                            hasError = true
-                            continue
-                        } else if (hasError) {
-                            val errorJson = JsonObject(line.substringAfter("data: "))
-                            log.warn("Received error while streaming completions: $errorJson")
+                        val statusCode = errorJson.getJsonObject("error").getInteger("status_code")
+                        throw UnknownAPIException(statusCode, jsonDecoder.decodeFromString(errorJson.toString()))
+                    }
 
-                            val statusCode = errorJson.getJsonObject("error").getInteger("status_code")
-                            throw UnknownAPIException(statusCode, jsonDecoder.decodeFromString(errorJson.toString()))
-                        }
-
-                        val chunkJson = line.substringAfter("data: ")
-                        if (chunkJson != "[DONE]") {
-                            emit(jsonDecoder.decodeFromString(chunkJson))
-                        }
+                    val chunkJson = line.substringAfter("data: ")
+                    if (chunkJson != "[DONE]") {
+                        emit(jsonDecoder.decodeFromString(chunkJson))
                     }
                 }
-            } catch (e: HttpRequestTimeoutException) {
-                throw OpenAITimeoutException(e)
             }
+        } catch (e: HttpRequestTimeoutException) {
+            throw OpenAITimeoutException(e)
         }
     }
 

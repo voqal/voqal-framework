@@ -1,9 +1,9 @@
 package dev.voqal.provider.clients.picovoice
 
+import com.intellij.openapi.project.Project
 import com.sun.jna.Pointer
 import com.sun.jna.ptr.FloatByReference
 import com.sun.jna.ptr.PointerByReference
-import com.intellij.openapi.project.Project
 import dev.voqal.provider.VadProvider
 import dev.voqal.provider.clients.picovoice.natives.CobraNative
 import dev.voqal.provider.clients.picovoice.natives.PicovoiceNative

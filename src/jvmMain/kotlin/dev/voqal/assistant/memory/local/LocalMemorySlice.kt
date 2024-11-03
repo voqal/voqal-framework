@@ -6,7 +6,6 @@ import com.aallam.openai.api.core.Role
 import com.aallam.openai.api.exception.OpenAIAPIException
 import com.aallam.openai.api.model.ModelId
 import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import dev.voqal.assistant.VoqalDirective
 import dev.voqal.assistant.VoqalResponse
@@ -44,9 +43,9 @@ class LocalMemorySlice(
             ?: throw IllegalStateException("Prompt settings not found")
         val configService = project.service<VoqalConfigService>()
         val config = configService.getConfig()
-//        if (!config.pluginSettings.enabled) {
-//            throw IllegalStateException("Plugin is disabled")
-//        }
+        if (!config.pluginSettings.enabled) {
+            throw IllegalStateException("Plugin is disabled")
+        }
 
         var lmSettings = directive.getLanguageModelSettings()
         if (promptSettings.languageModel.isNotBlank()) {
@@ -114,7 +113,7 @@ class LocalMemorySlice(
             }
         } else {
             if (addMessage) {
-                messageList.add(ChatMessage(ChatRole.User, directive.developer.transcription))
+                messageList.add(ChatMessage(ChatRole.User, "directive.developer.transcription")) //todo: this
             } else {
                 log.debug("No message added")
             }

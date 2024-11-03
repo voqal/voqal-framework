@@ -12,12 +12,15 @@ data class PromptSettings(
     val promptText: String = "",
     val promptUrl: String = "",
     val languageModel: String = "",
+    val showPartialResults: Boolean = false,
     val decomposeDirectives: Boolean = false,
+    val codeSmellCorrection: Boolean = false,
     val vectorStoreId: String = "",
     val assistantId: String = "",
     val assistantThreadId: String = "",
+    val editFormat: EditFormat = EditFormat.FULL_TEXT,
     val streamCompletions: Boolean = false,
-    val functionCalling: FunctionCalling = FunctionCalling.NATIVE,
+    val functionCalling: FunctionCalling = FunctionCalling.MARKDOWN,
     val toolsDir: String = Paths.get(getDefaultVoqalHome().absolutePath, "tools").toString()
 ) : ConfigurableSettings {
 
@@ -31,17 +34,16 @@ data class PromptSettings(
         promptText = json.getString("promptText", ""),
         promptUrl = json.getString("promptUrl", ""),
         languageModel = json.getString("languageModel", json.getString("modelName", "")),
+        showPartialResults = json.getBoolean("showPartialResults", false),
         decomposeDirectives = json.getBoolean("decomposeDirectives", false),
+        codeSmellCorrection = json.getBoolean("codeSmellCorrection", false),
         vectorStoreId = json.getString("vectorStoreId", ""),
         assistantId = json.getString("assistantId", ""),
         assistantThreadId = json.getString("assistantThreadId", ""),
+        editFormat = EditFormat.valueOf(json.getString("editFormat", EditFormat.FULL_TEXT.name)),
         streamCompletions = json.getBoolean("streamCompletions", false),
-        functionCalling = FunctionCalling.lenientValueOf(
-            json.getString("functionCalling", FunctionCalling.NATIVE.name)
-        ),
-        toolsDir = json.getString(
-            "toolsDir", Paths.get(getDefaultVoqalHome().absolutePath, "tools").toString()
-        )
+        functionCalling = FunctionCalling.lenientValueOf(json.getString("functionCalling", FunctionCalling.MARKDOWN.name)),
+        toolsDir = json.getString("toolsDir", Paths.get(getDefaultVoqalHome().absolutePath, "tools").toString())
     )
 
     override fun toJson(): JsonObject {
@@ -52,10 +54,13 @@ data class PromptSettings(
             put("promptText", promptText)
             put("promptUrl", promptUrl)
             put("languageModel", languageModel)
+            put("showPartialResults", showPartialResults)
             put("decomposeDirectives", decomposeDirectives)
+            put("codeSmellCorrection", codeSmellCorrection)
             put("vectorStoreId", vectorStoreId)
             put("assistantId", assistantId)
             put("assistantThreadId", assistantThreadId)
+            put("editFormat", editFormat.name)
             put("streamCompletions", streamCompletions)
             put("functionCalling", functionCalling.name)
             put("toolsDir", toolsDir)
@@ -72,7 +77,7 @@ data class PromptSettings(
             promptText = if (promptText.isEmpty()) "" else "***",
             promptUrl = if (promptUrl.isEmpty()) "" else "***",
             languageModel = if (languageModel.isEmpty()) "" else "***",
-            toolsDir = if (toolsDir.isEmpty()) "" else "***",
+            toolsDir = "***"
         )
     }
 
@@ -87,6 +92,20 @@ data class PromptSettings(
             fun lenientValueOf(str: String): PProvider {
                 if (str.equals("DEFAULT", true)) return VOQAL
                 return PProvider.valueOf(str.uppercase().replace(" ", "_"))
+            }
+        }
+    }
+
+    enum class EditFormat {
+        FULL_TEXT,
+        DIFF;
+
+        val displayName = name.replace("_", " ").lowercase().capitalize()
+
+        companion object {
+            @JvmStatic
+            fun lenientValueOf(str: String): EditFormat {
+                return EditFormat.valueOf(str.replace(" ", "_").uppercase())
             }
         }
     }

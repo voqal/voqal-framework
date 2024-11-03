@@ -1,9 +1,11 @@
 package dev.voqal.provider.clients.openai
 
+import com.aallam.openai.api.chat.*
+import com.aallam.openai.api.model.ModelId
 import com.intellij.openapi.Disposable
-import com.intellij.openapi.ThreadingAssertions
-import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
+import com.intellij.util.concurrency.ThreadingAssertions
+import dev.voqal.assistant.VoqalDirective
 import dev.voqal.assistant.focus.SpokenTranscript
 import dev.voqal.config.settings.PromptSettings.FunctionCalling
 import dev.voqal.services.*
@@ -18,11 +20,11 @@ import io.pebbletemplates.pebble.error.ParserException
 import io.vertx.core.Promise
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
+import io.vertx.kotlin.coroutines.coAwait
 import kotlinx.coroutines.*
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.channels.consumeEach
-import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToJsonElement
 import java.io.InterruptedIOException
@@ -55,9 +57,7 @@ class RealtimeSession(
     private var pis: PipedInputStream? = null
     private var pos: PipedOutputStream? = null
     private var disposed: Boolean = false
-    private val responseQueue = LinkedBlockingQueue<Promise<Any>>()
-    private val deltaQueue = LinkedBlockingQueue<Promise<FlowCollector<String>>>()
-    private val deltaMap = mutableMapOf<String, Any>()
+    private val responseQueue = LinkedBlockingQueue<Promise<String>>()
 
     init {
         restartConnection()
@@ -126,29 +126,35 @@ class RealtimeSession(
     }
 
     private fun updateSession() {
-//        val browser = browserMap[tabId]
-//        if (browser == null) {
-//            //log.info("null browser")
-//            return
-//        }
         val configService = project.service<VoqalConfigService>()
         val toolService = project.service<VoqalToolService>()
         val promptName = configService.getCurrentPromptMode()
         var nopDirective = project.service<VoqalDirectiveService>()
             .createDirective(SpokenTranscript("n/a", null), promptName = promptName)
         nopDirective = nopDirective.copy(
-            assistant = nopDirective.assistant.copy(
-                availableActions = toolService.getAvailableTools().values,
-                promptSettings = nopDirective.assistant.promptSettings?.copy(
-                    functionCalling = FunctionCalling.NATIVE
+            contextMap = nopDirective.contextMap.toMutableMap().apply {
+                put(
+                    "assistant", nopDirective.assistant.copy(
+                        availableActions = toolService.getAvailableTools().values,
+                        promptSettings = nopDirective.assistant.promptSettings?.copy(
+                            functionCalling = FunctionCalling.NATIVE
+                        )
+                    )
                 )
-            )
+            }
         )
         val prompt = nopDirective.toMarkdown()
         val tools = nopDirective.assistant.availableActions
             .filter { it.isVisible(nopDirective) }
             .filter {
-                it.name != "tts"  //todo: dynamic
+                if (nopDirective.assistant.promptSettings!!.promptName.lowercase() == "edit mode") {
+                    it.name in setOf("edit_text", "looks_good", "cancel")
+                } else {
+                    it.name != "answer_question"
+                }
+            }
+            .map {
+                it.asTool(nopDirective).function
             }
 
         val newSession = JsonObject().apply {
@@ -158,8 +164,6 @@ class RealtimeSession(
                 put("model", "whisper-1")
             })
             put("tools", JsonArray(tools.map {
-                it.asTool(nopDirective).function
-            }.map {
                 JsonObject(jsonEncoder.encodeToJsonElement(it).toString())
                     .put("type", "function")
             }))
@@ -174,7 +178,7 @@ class RealtimeSession(
         if (newSession.toString() == activeSession.toString()) {
             return
         } else {
-            log.debug { "Updating realtime session prompt" }
+            log.debug("Updating realtime session prompt")
         }
         activeSession.mergeIn(newSession)
 
@@ -201,9 +205,9 @@ class RealtimeSession(
                             val json = JsonObject(frame.readText())
                             if (!json.getString("type").endsWith(".delta")) {
                                 if (json.getString("type") == "error") {
-                                    log.warn { "Realtime error: $json" }
+                                    log.warn("Realtime error: $json")
                                 } else {
-                                    log.trace { "Realtime event: $json" }
+                                    log.trace("Realtime event: $json")
                                 }
                             }
 
@@ -212,62 +216,26 @@ class RealtimeSession(
                                 if (errorMessage != "Response parsing interrupted") {
                                     log.warnChat(errorMessage)
                                 }
-                            } else if (json.getString("type") == "response.function_call_arguments.delta") {
-//                                val respId = json.getString("response_id")
-//                                val deltaValue = deltaMap.get(respId)
-//                                if (deltaValue is FlowCollector<*>) {
-//                                    @Suppress("UNCHECKED_CAST") val flowCollector = deltaValue as FlowCollector<String>
-//                                    channel.trySend(GlobalScope.launch(start = CoroutineStart.LAZY) {
-//                                        flowCollector.emit(json.getString("delta"))
-//                                    })
-//                                } else if (deltaValue == null) {
-//                                    //first delta
-//                                    val promise = deltaQueue.take()
-//                                    deltaMap[respId] = promise
-//                                }
                             } else if (json.getString("type") == "response.function_call_arguments.done") {
                                 val tool = json.getString("name")
                                 val args = json.getString("arguments")
                                 log.info("Tool call: $tool - Args: $args")
 
-                                val toolService = project.service<VoqalToolService>()
-                                val voqalTool = toolService.getAvailableTools()[tool]!!
-                                val callId = json.getString("call_id")
-                                toolService.executeTool(args, voqalTool) {
-                                    val chatContentManager = project.service<ChatToolWindowContentManager>()
-                                    chatContentManager.addAssistantToolResponse(voqalTool, callId, args, it)
+                                responseQueue.take().complete(JsonObject().apply {
+                                    put("tool", tool)
+                                    put("parameters", JsonObject(args))
+                                }.toString())
 
+                                project.scope.launch {
                                     session.send(Frame.Text(JsonObject().apply {
                                         put("type", "conversation.item.create")
                                         put("item", JsonObject().apply {
                                             put("type", "function_call_output")
-                                            put("call_id", callId)
-                                            put("output", it.toString())
+                                            put("status", "completed")
+                                            put("call_id", json.getString("call_id"))
+                                            put("output", "success")
                                         })
                                     }.toString()))
-                                    session.send(Frame.Text(JsonObject().apply {
-                                        put("type", "response.create")
-                                    }.toString()))
-                                }
-
-                                if (!voqalTool.manualConfirm) {
-                                    project.scope.launch {
-                                        session.send(Frame.Text(JsonObject().apply {
-                                            put("type", "conversation.item.create")
-                                            put("item", JsonObject().apply {
-                                                put("type", "function_call_output")
-                                                put("call_id", callId)
-                                                put("output", "success")
-                                            })
-                                        }.toString()))
-
-                                        //todo: dynamic trigger?
-                                        if (tool == "input_form") {
-                                            session.send(Frame.Text(JsonObject().apply {
-                                                put("type", "response.create")
-                                            }.toString()))
-                                        }
-                                    }
                                 }
                             } else if (json.getString("type") == "response.audio.delta") {
                                 channel.trySend(project.scope.launch(start = CoroutineStart.LAZY) {
@@ -276,7 +244,7 @@ class RealtimeSession(
                                         if (readResponses.contains(responseId)) {
                                             return@launch
                                         } else {
-                                            log.debug { "Playing audio response: $responseId" }
+                                            log.info("Playing audio response: $responseId")
                                             readResponses.add(responseId)
                                             playingResponseId = responseId
                                         }
@@ -313,29 +281,32 @@ class RealtimeSession(
                             } else if (json.getString("type") == "input_audio_buffer.speech_stopped") {
                                 log.info("Realtime speech stopped")
                             } else if (json.getString("type") == "conversation.item.input_audio_transcription.completed") {
-                                var transcript = json.getString("transcript")
-                                if (transcript.endsWith("\n")) {
-                                    transcript = transcript.substring(0, transcript.length - 1)
-                                }
+                                val transcript = json.getString("transcript")
                                 log.info("User transcript: $transcript")
                                 val chatContentManager = project.service<ChatToolWindowContentManager>()
                                 chatContentManager.addUserMessage(transcript)
                             } else if (json.getString("type") == "response.audio_transcript.done") {
                                 val transcript = json.getString("transcript")
                                 log.info("Assistant transcript: $transcript")
-                                val chatContentManager = project.service<ChatToolWindowContentManager>()
-                                chatContentManager.addAssistantMessage(transcript)
+
+                                responseQueue.take().complete(JsonObject().apply {
+                                    put("tool", "answer_question")
+                                    put("parameters", JsonObject().apply {
+                                        put("answer", transcript)
+                                        put("audioModality", true)
+                                    })
+                                }.toString())
                             } else if (json.getString("type") == "response.text.done") {
                                 val text = json.getString("text")
                                 log.info("Assistant text: $text")
 
-//                                responseQueue.take().complete(JsonObject().apply {
-//                                    put("tool", "answer_question")
-//                                    put("parameters", JsonObject().apply {
-//                                        put("answer", text)
-//                                        //put("audioModality", true)
-//                                    })
-//                                }.toString())
+                                responseQueue.take().complete(JsonObject().apply {
+                                    put("tool", "answer_question")
+                                    put("parameters", JsonObject().apply {
+                                        put("answer", text)
+                                        //put("audioModality", true)
+                                    })
+                                }.toString())
                             }
                         }
 
@@ -434,82 +405,50 @@ class RealtimeSession(
         }
     }
 
-//    suspend fun chatCompletion(request: ChatCompletionRequest, directive: VoqalDirective?): ChatCompletion {
-//        val eventId = sendTextMessage(directive!!)
-//
-//        val promise = Promise.promise<Any>()
-//        responseQueue.add(promise)
-//
-//        session.send(Frame.Text(JsonObject().apply {
-//            put("event_id", "$eventId.response") //todo: doesn't correlate with response
-//            put("type", "response.create")
-//        }.toString()))
-//
-//        //todo: realtime can choose to merge reqs (i.e. hi 3 times quickly = 1 response)
-//        val responseJson = promise.future().coAwait()
-//        return ChatCompletion(
-//            id = "n/a",
-//            created = System.currentTimeMillis(),
-//            model = ModelId("n/a"),
-//            choices = listOf(
-//                ChatChoice(
-//                    index = 0,
-//                    ChatMessage(
-//                        ChatRole.Assistant,
-//                        TextContent(
-//                            content = responseJson as String
-//                        )
-//                    )
-//                )
-//            )
-//        )
-//    }
-//
-//    suspend fun streamChatCompletion(
-//        request: ChatCompletionRequest,
-//        directive: VoqalDirective?
-//    ): Flow<ChatCompletionChunk> {
-//        val eventId = sendTextMessage(directive!!)
-//
-//        val promise = Promise.promise<FlowCollector<String>>()
-//        deltaQueue.add(promise)
-//
-//        session.send(Frame.Text(JsonObject().apply {
-//            put("event_id", "$eventId.response") //todo: doesn't correlate with response
-//            put("type", "response.create")
-//        }.toString()))
-//
-//        TODO()
-//
-////        val responseFlow = promise.future().coAwait()
-////        return object : Flow<ChatCompletionChunk> {
-////            override suspend fun collect(collector: FlowCollector<ChatCompletionChunk>) {
-////                responseFlow.collect {
-////                    collector.emit(ChatCompletionChunk(it))
-////                }
-////            }
-////        }
-//    }
-//
-//    private suspend fun sendTextMessage(directive: VoqalDirective): String {
-//        val eventId = "voqal." + UUID.randomUUID().toString()
-//        val json = JsonObject().apply {
-//            put("event_id", "$eventId.conversation.item")
-//            put("type", "conversation.item.create")
-//            put("item", JsonObject().apply {
-//                put("type", "message")
-//                put("status", "completed")
-//                put("role", "user")
-//                put("content", JsonArray().add(JsonObject().apply {
-//                    put("type", "input_text")
-//                    put("text", directive.developer.transcription)
-//                }))
-//            })
-//        }
-//        session.send(Frame.Text(json.toString()))
-//
-//        return eventId
-//    }
+    suspend fun chatCompletion(request: ChatCompletionRequest, directive: VoqalDirective?): ChatCompletion {
+        val eventId = "voqal." + UUID.randomUUID().toString()
+        val json = JsonObject().apply {
+            put("event_id", "$eventId.conversation.item")
+            put("type", "conversation.item.create")
+            put("item", JsonObject().apply {
+                put("type", "message")
+                put("status", "completed")
+                put("role", "user")
+                put("content", JsonArray().add(JsonObject().apply {
+                    put("type", "input_text")
+                    put("text", "directive!!.developer.transcription") //todo: this
+                }))
+            })
+        }
+        session.send(Frame.Text(json.toString()))
+
+        val promise = Promise.promise<String>()
+        responseQueue.add(promise)
+
+        session.send(Frame.Text(JsonObject().apply {
+            put("event_id", "$eventId.response") //todo: doesn't correlate with response
+            put("type", "response.create")
+        }.toString()))
+
+        //todo: realtime can choose to merge reqs (i.e. hi 3 times quickly = 1 response)
+        val responseJson = promise.future().coAwait()
+        return ChatCompletion(
+            id = "n/a",
+            created = System.currentTimeMillis(),
+            model = ModelId("n/a"),
+            choices = listOf(
+                ChatChoice(
+                    index = 0,
+                    ChatMessage(
+                        ChatRole.Assistant,
+                        TextContent(
+                            content = responseJson
+                        )
+                    )
+                )
+            )
+        )
+    }
 
     fun sampleRate() = 24000f
 

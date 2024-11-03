@@ -1,12 +1,14 @@
 package dev.voqal.utils
 
 import com.aallam.openai.api.exception.OpenAIException
-import com.intellij.openapi.components.service
-import dev.voqal.assistant.focus.SpokenTranscript
 import com.intellij.openapi.project.Project
+import dev.voqal.assistant.focus.SpokenTranscript
 import dev.voqal.config.settings.VoiceDetectionSettings.VoiceDetectionProvider
+import dev.voqal.provider.AiProvider
 import dev.voqal.provider.StmProvider
+import dev.voqal.provider.clients.picovoice.NativesExtractor
 import dev.voqal.services.*
+import dev.voqal.status.VoqalStatus
 import dev.voqal.utils.SharedAudioCapture.AudioDetection.Companion.PRE_SPEECH_BUFFER_SIZE
 import dev.voqal.utils.SharedAudioSystem.SharedAudioLine
 import kotlinx.coroutines.*
@@ -71,8 +73,8 @@ class SharedAudioCapture(private val project: Project) {
     private var thread: Thread? = null
     private var microphoneName: String = ""
     private var line: SharedAudioLine? = null
-//    private val modeProviders = mutableMapOf<String, AiProvider>()
-//    private var currentMode: String = "Idle Mode"
+    private val modeProviders = mutableMapOf<String, AiProvider>()
+    private var currentMode: String = "Idle Mode"
 
     data class AudioDetection(
         val voiceCaptured: AtomicBoolean = AtomicBoolean(false),
@@ -95,42 +97,42 @@ class SharedAudioCapture(private val project: Project) {
     init {
         log.debug("Using audio format: $FORMAT")
         val configService = project.service<VoqalConfigService>()
-//        val config = configService.getConfig()
-//        if (config.browserSettings.microphoneName == "") {
-//            val availableMicrophones = getAvailableMicrophones()
-//            if (availableMicrophones.isNotEmpty()) {
-//                configService.updateConfig(
-//                    config.browserSettings.copy(
-//                        microphoneName = availableMicrophones.first().name
-//                    )
-//                )
-//            }
-//        } else {
-//            microphoneName = config.browserSettings.microphoneName
-//        }
-//        if (config.browserSettings.enabled) {
-//            startCapture()
-//        }
+        val config = configService.getConfig()
+        if (config.pluginSettings.microphoneName == "") {
+            val availableMicrophones = getAvailableMicrophones()
+            if (availableMicrophones.isNotEmpty()) {
+                configService.updateConfig(
+                    config.pluginSettings.copy(
+                        microphoneName = availableMicrophones.first().name
+                    )
+                )
+            }
+        } else {
+            microphoneName = config.pluginSettings.microphoneName
+        }
+        if (config.pluginSettings.enabled) {
+            startCapture()
+        }
 
-//        var enabled = config.browserSettings.enabled
-//        val statusService = project.service<VoqalStatusService>()
-//        statusService.onStatusChange { it, _ ->
-//            if (!enabled && it == VoqalStatus.IDLE) {
-//                enabled = true
-//                restart()
-//            } else if (it == VoqalStatus.DISABLED) {
-//                enabled = false
-//                cancel()
-//            }
-//
-//            if (it == VoqalStatus.EDITING) {
-//                currentMode = "Edit Mode"
-//            } else {
-//                currentMode = "Idle Mode"
-//            }
-//        }
+        var enabled = config.pluginSettings.enabled
+        val statusService = project.service<VoqalStatusService>()
+        statusService.onStatusChange { it, _ ->
+            if (!enabled && it == VoqalStatus.IDLE) {
+                enabled = true
+                restart()
+            } else if (it == VoqalStatus.DISABLED) {
+                enabled = false
+                cancel()
+            }
 
-        var vadProvider: VoiceDetectionProvider? = null
+            if (it == VoqalStatus.EDITING) {
+                currentMode = "Edit Mode"
+            } else {
+                currentMode = "Idle Mode"
+            }
+        }
+
+        var vadProvider = configService.getConfig().voiceDetectionSettings.provider
         configService.onConfigChange {
             val newVadProvider = it.voiceDetectionSettings.provider
             if (vadProvider == VoiceDetectionProvider.NONE && newVadProvider != VoiceDetectionProvider.NONE) {
@@ -143,17 +145,17 @@ class SharedAudioCapture(private val project: Project) {
                 restart()
             }
 
-//            project.scope.launch {
-//                val aiProvider = configService.getAiProvider()
-//                configService.getConfig().promptLibrarySettings.prompts.forEach {
-//                    val provider = aiProvider.findProvider(it.languageModel)
-//                    if (provider == null) {
-//                        log.warn("Unable to find provider: " + it.languageModel)
-//                    } else {
-//                        modeProviders[it.promptName] = provider
-//                    }
-//                }
-//            }
+            project.scope.launch {
+                val aiProvider = configService.getAiProvider()
+                configService.getConfig().promptLibrarySettings.prompts.forEach {
+                    val provider = aiProvider.findProvider(it.languageModel)
+                    if (provider == null) {
+                        log.warn("Unable to find provider: " + it.languageModel)
+                    } else {
+                        modeProviders[it.promptName] = provider
+                    }
+                }
+            }
         }
     }
 
@@ -167,7 +169,7 @@ class SharedAudioCapture(private val project: Project) {
             val configService = project.service<VoqalConfigService>()
             val config = configService.getConfig()
             configService.updateConfig(
-                config.browserSettings.copy(
+                config.pluginSettings.copy(
                     microphoneName = microphoneName
                 )
             )
@@ -176,7 +178,7 @@ class SharedAudioCapture(private val project: Project) {
         }
     }
 
-    fun startCapture() {
+    private fun startCapture() {
         if (System.getProperty("VQL_TEST_MODE") == "true") return
         log.debug("Starting shared audio capture")
         active = true
@@ -221,7 +223,6 @@ class SharedAudioCapture(private val project: Project) {
                 return
             }
             log.debug("Available microphones: $availableMicrophones")
-            microphoneName = configService.getConfig().browserSettings.microphoneName
             if (microphoneName.isEmpty()) {
                 log.info("Using default microphone")
             } else {
@@ -229,7 +230,6 @@ class SharedAudioCapture(private val project: Project) {
             }
 
             val mixerInfo = availableMicrophones.firstOrNull { it.name == microphoneName }
-                ?: availableMicrophones.firstOrNull()
             val line = if (mixerInfo != null) {
                 SharedAudioSystem.getTargetDataLine(project, FORMAT, mixerInfo)
             } else {
@@ -257,20 +257,21 @@ class SharedAudioCapture(private val project: Project) {
             val capturedVoice = LinkedList<Frame>()
             val audioDetection = AudioDetection()
             val aiProvider = configService.getAiProvider()
-//            configService.getConfig().promptLibrarySettings.prompts.forEach {
-//                val provider = aiProvider.findProvider(it.languageModel)
-//                if (provider == null) {
-//                    log.warn("Unable to find provider: " + it.languageModel)
-//                } else {
-//                    modeProviders[it.promptName] = provider
-//                }
-//            }
+            configService.getConfig().promptLibrarySettings.prompts.forEach {
+                val provider = aiProvider.findProvider(it.languageModel)
+                if (provider == null) {
+                    log.warn("Unable to find provider: " + it.languageModel)
+                } else {
+                    modeProviders[it.promptName] = provider
+                }
+            }
+            currentMode = configService.getCurrentPromptMode()
 
             val processJob = CoroutineScope(Dispatchers.Default).launch {
                 while (active) {
                     val audioData = audioQueue.take()
                     val liveDataListeners = listeners.filter { it.isLiveDataListener() }
-                    val modeProvider = if (aiProvider.isStmProvider()) aiProvider.asStmProvider() else aiProvider
+                    val modeProvider = modeProviders[currentMode]
                     if (!testMode && paused) continue
 
                     for (listener in liveDataListeners) {
@@ -338,16 +339,35 @@ class SharedAudioCapture(private val project: Project) {
                         }
 
                         val audioLengthMs = (mergedAudio.size.toDouble() / FORMAT.frameSize) * 1000.0 / SAMPLE_RATE
-                        log.debug { "Speech audio length: ${audioLengthMs}ms" }
+                        log.info("Speech audio length: ${audioLengthMs}ms")
 
-                        val speechDir = project.service<VoqalConfigService>().getConfig().speechToTextSettings.speechDir
+                        val speechDir = File(configService.getConfig().speechToTextSettings.speechDir)
                         speechDir.mkdirs()
                         val speechId = aiProvider.asVadProvider().speechId
                         val speechFile = File(speechDir, "developer-$speechId.wav")
                         convertToWavFormat(mergedAudio, speechFile)
 
                         val directiveService = project.service<VoqalDirectiveService>()
-                        if (modeProvider?.isStmProvider() == true) {
+                        if (aiProvider.isSttProvider()) {
+                            val sttProvider = aiProvider.asSttProvider()
+                            if ((sttProvider as? AudioDataListener)?.isLiveDataListener() == true) {
+                                continue //already sent data
+                            }
+
+                            val sttModelName = configService.getConfig().speechToTextSettings.modelName
+                            try {
+                                val transcript = sttProvider.transcribe(speechFile, sttModelName)
+                                val spokenTranscript = SpokenTranscript(transcript, speechId, isFinal = true)
+                                log.info("Transcript: ${spokenTranscript.transcript}")
+                                directiveService.handleTranscription(spokenTranscript)
+                            } catch (e: OpenAIException) {
+                                val errorMessage = e.message ?: "An unknown error occurred"
+                                log.warnChat(errorMessage)
+                            } catch (e: Exception) {
+                                val errorMessage = e.message ?: "An unknown error occurred"
+                                log.errorChat(errorMessage, e)
+                            }
+                        } else if (modeProvider?.isStmProvider() == true) {
                             if ((modeProvider as? AudioDataListener)?.isLiveDataListener() == true) {
                                 continue //already sent data
                             }
@@ -367,25 +387,6 @@ class SharedAudioCapture(private val project: Project) {
                                 SpokenTranscript("", speechId),
                                 usingAudioModality = true
                             )
-                        } else if (aiProvider.isSttProvider()) {
-                            val sttProvider = aiProvider.asSttProvider()
-                            if ((sttProvider as? AudioDataListener)?.isLiveDataListener() == true) {
-                                continue //already sent data
-                            }
-
-                            val sttModelName = configService.getConfig().speechToTextSettings.modelName
-                            try {
-                                val transcript = sttProvider.transcribe(speechFile, sttModelName)
-                                val spokenTranscript = SpokenTranscript(transcript, speechId, isFinal = true)
-                                log.info("Transcript: ${spokenTranscript.transcript}")
-                                directiveService.handleTranscription(spokenTranscript)
-                            } catch (e: OpenAIException) {
-                                val errorMessage = e.message ?: "An unknown error occurred"
-                                log.warnChat(errorMessage)
-                            } catch (e: Exception) {
-                                val errorMessage = e.message ?: "An unknown error occurred"
-                                log.errorChat(errorMessage, e)
-                            }
                         } else {
                             log.warnChat("No speech-to-text provider available")
                         }
@@ -450,13 +451,13 @@ class SharedAudioCapture(private val project: Project) {
 
     fun pause() {
         if (paused) return
-        log.info("Pausing audio capture")
+        log.trace("Pausing audio capture")
         this.paused = true
     }
 
     fun resume() {
         if (!paused) return
-        log.info("Resuming audio capture")
+        log.trace("Resuming audio capture")
         this.paused = false
     }
 

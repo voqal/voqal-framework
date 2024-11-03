@@ -1,14 +1,12 @@
 package dev.voqal.assistant
 
-import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import dev.voqal.assistant.context.AssistantContext
-import dev.voqal.assistant.context.DeveloperContext
 import dev.voqal.assistant.context.UserContext
+import dev.voqal.assistant.context.VoqalContext
 import dev.voqal.assistant.template.VoqalTemplateEngine
 import dev.voqal.config.settings.LanguageModelSettings
-import dev.voqal.services.VoqalConfigService
-import dev.voqal.services.VoqalDirectiveService
+import dev.voqal.services.*
 import io.vertx.core.json.JsonObject
 import kotlinx.serialization.json.Json
 import java.io.StringWriter
@@ -17,18 +15,22 @@ import java.io.StringWriter
  * Represents a processable command for Voqal.
  *
  * @property assistant Holds the current configuration of the assistant.
- * @property developer Holds information provided by developer.
  */
 data class VoqalDirective(
     val project: Project,
-    val assistant: AssistantContext,
-    val developer: DeveloperContext,
-    val user: UserContext? = null
+    val contextMap: Map<String, VoqalContext>
 ) {
+
+    val assistant: AssistantContext by lazy { contextMap["assistant"] as AssistantContext }
+    val userContext: UserContext by lazy { contextMap["user"] as UserContext }
 
     val requestId by lazy { assistant.memorySlice.id }
     val directiveId by lazy { assistant.parentDirective?.assistant?.memorySlice?.id ?: assistant.memorySlice.id }
     private var promptCache: String? = null
+
+    fun <T : VoqalContext> getContext(key: String): T {
+        return contextMap[key] as T
+    }
 
     /**
      * Creates the final prompt which will be sent to LLM.
@@ -49,18 +51,8 @@ data class VoqalDirective(
         val assistantMap = VoqalDirectiveService.convertJsonElementToMap(
             Json.parseToJsonElement(assistant.toJson(this).toString())
         )
-        val developerMap = VoqalDirectiveService.convertJsonElementToMap(
-            Json.parseToJsonElement(developer.toJson().toString())
-        )
-        val userMap = user?.let {
-            VoqalDirectiveService.convertJsonElementToMap(
-                Json.parseToJsonElement(it.toJson().toString())
-            )
-        }
         val contextMap = mutableMapOf(
             "assistant" to assistantMap,
-            "developer" to developerMap,
-            "user" to userMap,
             "directive" to this
         )
         compiledTemplate.evaluate(writer, contextMap)
@@ -103,8 +95,6 @@ data class VoqalDirective(
     fun toJson(): JsonObject {
         return JsonObject().apply {
             put("assistant", assistant.toJson(this@VoqalDirective))
-            user?.let { put("user", it.toJson()) }
-            put("developer", developer.toJson())
         }
     }
 

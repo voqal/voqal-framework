@@ -43,6 +43,7 @@ kotlin {
 
                 compileOnly(libs.openai.client)
                 compileOnly(libs.vertx.core)
+                compileOnly(libs.vertx.lang.kotlin.coroutines)
                 compileOnly(libs.ktor.client.content.negotiation)
                 compileOnly(libs.ktor.serialization.kotlinx.json)
                 compileOnly(libs.pebble)

@@ -1,10 +1,10 @@
 package dev.voqal.provider.clients
 
-import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import dev.voqal.provider.*
 import dev.voqal.services.VoqalConfigService
+import dev.voqal.services.service
 
 class AiProvidersClient(private val project: Project) : AiProvider {
 

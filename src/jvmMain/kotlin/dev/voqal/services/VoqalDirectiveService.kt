@@ -3,9 +3,9 @@ package dev.voqal.services
 import com.intellij.openapi.Disposable
 import dev.voqal.assistant.VoqalDirective
 import dev.voqal.assistant.VoqalResponse
+import dev.voqal.assistant.focus.DirectiveExecution
 import dev.voqal.assistant.focus.SpokenTranscript
 import dev.voqal.config.settings.TextToSpeechSettings
-import dev.voqal.status.VoqalStatus.*
 import kotlinx.serialization.json.*
 
 /**
@@ -46,10 +46,10 @@ interface VoqalDirectiveService {
 
     fun reset()
 
-//    fun onDirectiveExecution(
-//        disposable: Disposable = project.service<ProjectScopedService>(),
-//        listener: (VoqalDirectiveService, DirectiveExecution) -> Unit
-//    )
+    fun onDirectiveExecution(
+        disposable: Disposable? = null,
+        listener: (VoqalDirectiveService, DirectiveExecution) -> Unit
+    )
 
     fun isActive(): Boolean
 

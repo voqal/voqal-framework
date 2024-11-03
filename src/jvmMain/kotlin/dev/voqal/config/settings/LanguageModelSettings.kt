@@ -6,14 +6,15 @@ import dev.voqal.provider.clients.azure.AzureClient
 import dev.voqal.provider.clients.cerebras.CerebrasClient
 import dev.voqal.provider.clients.deepseek.DeepSeekClient
 import dev.voqal.provider.clients.fireworks.FireworksClient
+import dev.voqal.provider.clients.googleapi.GoogleApiClient
 import dev.voqal.provider.clients.groq.GroqClient
 import dev.voqal.provider.clients.mistralai.MistralAiClient
 import dev.voqal.provider.clients.openai.OpenAiClient
 import dev.voqal.provider.clients.sambanova.SambaNovaClient
 import dev.voqal.provider.clients.togetherai.TogetherAiClient
+import dev.voqal.provider.clients.vertexai.VertexAiClient
 import dev.voqal.provider.clients.voqal.VoqalProClient
 import io.vertx.core.json.JsonObject
-import javax.swing.Icon
 
 data class LanguageModelSettings(
     val provider: LMProvider = LMProvider.NONE,
@@ -44,14 +45,14 @@ data class LanguageModelSettings(
         fun asDefault(provider: LMProvider): LanguageModelSettings {
             return when (provider) {
                 LMProvider.OPENAI -> LanguageModelSettings(provider, modelName = OpenAiClient.DEFAULT_MODEL)
-//                LMProvider.GOOGLE_API -> LanguageModelSettings(provider, modelName = GoogleApiClient.DEFAULT_MODEL)
+                LMProvider.GOOGLE_API -> LanguageModelSettings(provider, modelName = GoogleApiClient.DEFAULT_MODEL)
                 LMProvider.ANTHROPIC -> LanguageModelSettings(provider, modelName = AnthropicClient.DEFAULT_MODEL)
                 LMProvider.DEEPSEEK -> LanguageModelSettings(provider, modelName = DeepSeekClient.DEFAULT_MODEL)
                 LMProvider.GROQ -> LanguageModelSettings(provider, modelName = GroqClient.DEFAULT_MODEL)
                 LMProvider.FIREWORKS_AI -> LanguageModelSettings(provider, modelName = FireworksClient.DEFAULT_MODEL)
                 LMProvider.TOGETHER_AI -> LanguageModelSettings(provider, modelName = TogetherAiClient.DEFAULT_MODEL)
                 LMProvider.MISTRAL_AI -> LanguageModelSettings(provider, modelName = MistralAiClient.DEFAULT_MODEL)
-//                LMProvider.VERTEX_AI -> LanguageModelSettings(provider, modelName = VertexAiClient.DEFAULT_MODEL)
+                LMProvider.VERTEX_AI -> LanguageModelSettings(provider, modelName = VertexAiClient.DEFAULT_MODEL)
                 LMProvider.SAMBANOVA -> LanguageModelSettings(provider, modelName = SambaNovaClient.DEFAULT_MODEL)
                 LMProvider.CEREBRAS -> LanguageModelSettings(provider, modelName = CerebrasClient.DEFAULT_MODEL)
                 LMProvider.AZURE -> LanguageModelSettings(provider, modelName = AzureClient.DEFAULT_MODEL)
@@ -61,7 +62,6 @@ data class LanguageModelSettings(
                 LMProvider.HUGGING_FACE -> LanguageModelSettings(provider, modelName = "")
                 LMProvider.CUSTOM -> LanguageModelSettings(provider, modelName = "")
                 LMProvider.NONE -> LanguageModelSettings(provider, modelName = "")
-                else -> TODO()
             }
         }
     }
@@ -76,7 +76,7 @@ data class LanguageModelSettings(
         modelName = json.getString("modelName", ""),
         seed = json.getInteger("seed"),
         temperature = json.getDouble("temperature"),
-        observabilityProvider = OProvider.valueOf(json.getString("observabilityProvider") ?: OProvider.NONE.name),
+        observabilityProvider = OProvider.lenientValueOf(json.getString("observabilityProvider") ?: OProvider.NONE.name),
         observabilityKey = json.getString("observabilityKey", ""),
         observabilityUserId = json.getString("observabilityUserId", ""),
         apiUrl = json.getString("apiUrl", ""),
@@ -149,27 +149,6 @@ data class LanguageModelSettings(
         DEEPSEEK("DeepSeek"),
         FIREWORKS_AI("Fireworks AI"),
         CUSTOM("Custom");
-
-        fun getIcon(): Icon? {
-            return when {
-//                this == OLLAMA -> VoqalIcons.Compute.ollama
-//                this == GOOGLE_API || this == VERTEX_AI -> VoqalIcons.Compute.google
-//                this == OPENAI -> VoqalIcons.Compute.openai
-//                this == HUGGING_FACE -> VoqalIcons.Compute.huggingface
-//                this == MISTRAL_AI -> VoqalIcons.Compute.mistralai
-//                this == GROQ -> VoqalIcons.Compute.groq
-//                this == TOGETHER_AI -> VoqalIcons.Compute.t
-//                this == CUSTOM -> VoqalIcons.Compute.globe
-//                this == ANTHROPIC -> VoqalIcons.Compute.anthropic
-//                this == DEEPSEEK -> VoqalIcons.Compute.deepseek
-//                this == FIREWORKS_AI -> VoqalIcons.Compute.fireworks
-//                this == SAMBANOVA -> VoqalIcons.Compute.sambanova
-//                this == CEREBRAS -> VoqalIcons.Compute.cerebras
-//                this == AZURE -> VoqalIcons.Compute.azure
-//                this == VOQAL_PRO -> VoqalIcons.Compute.voqal
-                else -> null
-            }
-        }
 
         fun isKeyRequired(): Boolean {
             return this !in setOf(NONE, OLLAMA, VERTEX_AI, VOQAL_PRO)

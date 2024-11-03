@@ -5,11 +5,13 @@ import com.aallam.openai.api.core.Role
 import com.aallam.openai.api.core.Usage
 import com.aallam.openai.api.exception.*
 import com.aallam.openai.api.model.ModelId
-import dev.voqal.assistant.VoqalDirective
 import com.intellij.openapi.project.Project
+import dev.voqal.assistant.VoqalDirective
+import dev.voqal.assistant.memory.local.asDirectiveTool
 import dev.voqal.config.settings.PromptSettings.FunctionCalling
 import dev.voqal.provider.LlmProvider
 import dev.voqal.provider.StmProvider
+import dev.voqal.provider.clients.picovoice.NativesExtractor
 import dev.voqal.services.getVoqalLogger
 import io.ktor.client.*
 import io.ktor.client.call.*
@@ -154,17 +156,12 @@ class GoogleApiClient(
 
         if (directive?.assistant?.promptSettings?.functionCalling == FunctionCalling.NATIVE) {
             requestJson.put("tools", JsonArray().apply {
-                val toolsArray: JsonArray = TODO()
-//                = JsonArray(request.tools?.map { it.asDirectiveTool() }
-//                    ?.map { JsonObject(Json.encodeToString(it)) })
+                val toolsArray = JsonArray(request.tools?.map { it.asDirectiveTool() }
+                    ?.map { JsonObject(Json.encodeToString(it)) })
                 val functionDeclarations = toolsArray.map {
                     val jsonObject = it as JsonObject
                     jsonObject.remove("type")
-                    jsonObject.getJsonObject("function").apply {
-                        if (getJsonObject("parameters").isEmpty) {
-                            remove("parameters")
-                        }
-                    }
+                    jsonObject.getJsonObject("function")
                 }
                 add(JsonObject().put("function_declarations", JsonArray(functionDeclarations)))
             })
@@ -174,7 +171,7 @@ class GoogleApiClient(
         if (directive?.assistant?.speechId != null && directive.assistant.usingAudioModality) {
             log.debug("Using audio modality")
             val speechId = directive.assistant.speechId
-            val speechDirectory: File = TODO() //File(settings.installDir, "speech")
+            val speechDirectory = File(NativesExtractor.workingDirectory, "speech")
             speechDirectory.mkdirs()
             val speechFile = File(speechDirectory, "developer-$speechId.wav")
             val audio1Bytes = speechFile.readBytes()
@@ -251,30 +248,12 @@ class GoogleApiClient(
             val jsonObject = jsonElement as JsonObject
             val content = jsonObject.getJsonObject("content")
             val parts = content.getJsonArray("parts")
-            val partObject = parts.getJsonObject(0)
-            var toolCalls: List<ToolCall>? = null
-            val messageContent = if (partObject.containsKey("functionCall")) {
-                val funcCall = partObject.getJsonObject("functionCall")
-                toolCalls = listOf(
-                    ToolCall.Function(
-                        id = ToolId(funcCall.getString("name")),
-                        function = FunctionCall(
-                            nameOrNull = funcCall.getString("name"),
-                            argumentsOrNull = funcCall.getJsonObject("args").toString()
-                        )
-                    )
-                )
-                null
-            } else {
-                val text = partObject.getString("text") //todo: other parts?
-                TextContent(text)
-            }
+            val text = parts.getJsonObject(0).getString("text") //todo: other parts?
             ChatChoice(
                 index = index,
                 ChatMessage(
                     if (content.getString("role") == "model") Role.Assistant else Role.User,
-                    messageContent = messageContent,
-                    toolCalls = toolCalls
+                    TextContent(text)
                 )
             )
         }

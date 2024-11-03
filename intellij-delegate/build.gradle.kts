@@ -16,7 +16,9 @@ dependencies {
 }
 
 kotlin {
-    jvm()
+    jvm {
+        withJava()
+    }
     js {
         browser()
         binaries.executable()

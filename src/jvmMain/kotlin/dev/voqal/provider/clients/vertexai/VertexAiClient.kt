@@ -15,8 +15,8 @@ import com.google.cloud.vertexai.generativeai.ChatSession
 import com.google.cloud.vertexai.generativeai.ContentMaker
 import com.google.cloud.vertexai.generativeai.GenerativeModel
 import com.google.cloud.vertexai.generativeai.PartMaker
-import dev.voqal.assistant.VoqalDirective
 import com.intellij.openapi.project.Project
+import dev.voqal.assistant.VoqalDirective
 import dev.voqal.provider.LlmProvider
 import dev.voqal.provider.StmProvider
 import dev.voqal.provider.clients.picovoice.NativesExtractor
@@ -101,7 +101,7 @@ class VertexAiClient(
             ContentMaker.fromMultiModalData("Developer transcription attached", audio1)
         } else {
             log.debug("Using textual transcription")
-            ContentMaker.fromMultiModalData(directive.developer.transcription)
+            ContentMaker.fromMultiModalData("directive.developer.transcription") //todo: this
         }
         val resp = try {
             chatSession.sendMessage(content)

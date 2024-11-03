@@ -4,12 +4,12 @@ import com.aallam.openai.api.chat.*
 import com.aallam.openai.api.core.Usage
 import com.aallam.openai.api.exception.*
 import com.aallam.openai.api.model.ModelId
-import com.intellij.openapi.components.service
-import dev.voqal.assistant.VoqalDirective
 import com.intellij.openapi.project.Project
+import dev.voqal.assistant.VoqalDirective
 import dev.voqal.provider.LlmProvider
 import dev.voqal.services.VoqalContextService
 import dev.voqal.services.getVoqalLogger
+import dev.voqal.services.service
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.*

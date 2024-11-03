@@ -3,7 +3,6 @@ package dev.voqal.config.settings
 import dev.voqal.config.ConfigurableSettings
 import dev.voqal.config.settings.PromptSettings.FunctionCalling
 import io.vertx.core.json.JsonObject
-import java.io.File
 
 data class PromptLibrarySettings(
     val prompts: List<PromptSettings> = emptyList()

@@ -1,6 +1,7 @@
 package dev.voqal.services
 
 import com.intellij.openapi.Disposable
+import com.intellij.openapi.editor.Editor
 import dev.voqal.assistant.memory.MemorySlice
 import dev.voqal.config.settings.PromptSettings
 
@@ -14,7 +15,7 @@ interface  VoqalMemoryService : Disposable {
 
     fun getCurrentMemory(promptSettings: PromptSettings? = null): MemorySlice
 
-//    fun saveEditLabel(memoryId: String, editor: Editor)
+    fun saveEditLabel(memoryId: String, editor: Editor)
 
     fun putUserData(key: String, data: Any)
 

@@ -1,9 +1,9 @@
 package dev.voqal.assistant.template
 
-import com.intellij.openapi.components.service
 import dev.voqal.assistant.VoqalDirective
 import dev.voqal.services.VoqalMemoryService
 import dev.voqal.services.getVoqalLogger
+import dev.voqal.services.service
 import io.pebbletemplates.pebble.extension.AbstractExtension
 import io.pebbletemplates.pebble.extension.Function
 import io.pebbletemplates.pebble.template.EvaluationContext

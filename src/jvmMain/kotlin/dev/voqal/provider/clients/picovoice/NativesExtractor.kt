@@ -1,6 +1,7 @@
 package dev.voqal.provider.clients.picovoice
 
 import com.google.common.io.Resources
+import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.project.Project
 import dev.voqal.services.getVoqalLogger
 import org.apache.commons.io.FileUtils
@@ -14,6 +15,7 @@ object NativesExtractor {
 
     private var nativesExtracted = false
     //todo: this is nativesDirectory, make /tmp/voqal the working directory
+    @JvmStatic
     var workingDirectory = File(File(System.getProperty("java.io.tmpdir")), "voqal-natives")
 
     fun getMacArchitecture(): String {
@@ -45,42 +47,41 @@ object NativesExtractor {
             tmpDir.mkdirs()
         }
 
-        TODO()
         val startTime = System.currentTimeMillis()
-//        JarFile(File(PathManager.getJarPathForClass(NativesExtractor::class.java)!!)).use { jar ->
-//            val enumEntries = jar.entries()
-//            while (enumEntries.hasMoreElements()) {
-//                val file = enumEntries.nextElement() as JarEntry
-//                if (!file.name.startsWith("natives")) continue
-//
-//                val f = File(tmpDir, file.name.substringAfter("natives/"))
-//                if (f.exists() && f.isFile) {
-//                    log.trace("Deleting existing file: $f")
-//                    f.delete()
-//                    if (f.exists()) {
-//                        log.warn("Failed to delete file: $f")
-//                        continue
-//                    }
-//                } else if (file.isDirectory) {
-//                    if (!f.exists()) {
-//                        log.trace("Creating directory: $f")
-//                        f.mkdirs()
-//                    }
-//                    continue
-//                }
-//                log.debug("Extracting file: $f")
-//
-//                jar.getInputStream(file).use { inputStream ->
-//                    BufferedOutputStream(FileUtils.openOutputStream(f)).use { outputStream ->
-//                        val buffer = ByteArray(4096)
-//                        var bytesRead: Int
-//                        while (inputStream.read(buffer).also { bytesRead = it } != -1) {
-//                            outputStream.write(buffer, 0, bytesRead)
-//                        }
-//                    }
-//                }
-//            }
-//        }
+        JarFile(File(PathManager.getJarPathForClass(NativesExtractor::class.java)!!)).use { jar ->
+            val enumEntries = jar.entries()
+            while (enumEntries.hasMoreElements()) {
+                val file = enumEntries.nextElement() as JarEntry
+                if (!file.name.startsWith("natives")) continue
+
+                val f = File(tmpDir, file.name.substringAfter("natives/"))
+                if (f.exists() && f.isFile) {
+                    log.trace("Deleting existing file: $f")
+                    f.delete()
+                    if (f.exists()) {
+                        log.warn("Failed to delete file: $f")
+                        continue
+                    }
+                } else if (file.isDirectory) {
+                    if (!f.exists()) {
+                        log.trace("Creating directory: $f")
+                        f.mkdirs()
+                    }
+                    continue
+                }
+                log.debug("Extracting file: $f")
+
+                jar.getInputStream(file).use { inputStream ->
+                    BufferedOutputStream(FileUtils.openOutputStream(f)).use { outputStream ->
+                        val buffer = ByteArray(4096)
+                        var bytesRead: Int
+                        while (inputStream.read(buffer).also { bytesRead = it } != -1) {
+                            outputStream.write(buffer, 0, bytesRead)
+                        }
+                    }
+                }
+            }
+        }
 
         log.debug("Extracted Picovoice natives in ${System.currentTimeMillis() - startTime}ms")
     }

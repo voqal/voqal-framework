@@ -1,11 +1,10 @@
 package dev.voqal.provider.clients.picovoice
 
 import com.aallam.openai.api.audio.SpeechRequest
-import com.intellij.openapi.components.service
+import com.intellij.openapi.project.Project
 import com.sun.jna.Pointer
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.ptr.PointerByReference
-import com.intellij.openapi.project.Project
 import dev.voqal.provider.TtsProvider
 import dev.voqal.provider.TtsProvider.SpeechStreamRequest
 import dev.voqal.provider.clients.picovoice.natives.OrcaNative
@@ -13,6 +12,7 @@ import dev.voqal.provider.clients.picovoice.natives.PicovoiceNative
 import dev.voqal.services.VoqalConfigService
 import dev.voqal.services.getVoqalLogger
 import dev.voqal.services.scope
+import dev.voqal.services.service
 import io.ktor.utils.io.*
 import kotlinx.coroutines.launch
 import org.apache.commons.lang3.SystemUtils
@@ -133,7 +133,7 @@ class PicovoiceOrcaClient(
         var status = native.pv_orca_stream_open(orca, synthesizeParams, streamRef)
         PicovoiceNative.throwIfError(log, native, status)
 
-        log.debug { "TTS stream opened" }
+        log.debug("TTS stream opened")
         val channel = ByteChannel()
         project.scope.launch {
             do {
@@ -158,7 +158,7 @@ class PicovoiceOrcaClient(
                     }
                 }
             } while (!request.isFinished || request.queue.isNotEmpty())
-            log.debug { "TTS stream loop finished" }
+            log.debug("TTS stream loop finished")
 
             val numSamples = IntByReference()
             val pcmRef = PointerByReference()
@@ -174,7 +174,7 @@ class PicovoiceOrcaClient(
             }
 
             native.pv_orca_stream_close(streamRef.value)
-            log.debug { "TTS stream closed" }
+            log.debug("TTS stream closed")
         }
 
         return TtsProvider.RawAudio(

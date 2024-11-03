@@ -1,11 +1,10 @@
 package dev.voqal.provider.clients.picovoice
 
-import com.intellij.openapi.components.service
+import com.intellij.openapi.project.Project
 import com.sun.jna.Pointer
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.ptr.PointerByReference
 import dev.voqal.assistant.focus.SpokenTranscript
-import com.intellij.openapi.project.Project
 import dev.voqal.provider.SttProvider
 import dev.voqal.provider.clients.picovoice.natives.CheetahNative
 import dev.voqal.provider.clients.picovoice.natives.PicovoiceNative

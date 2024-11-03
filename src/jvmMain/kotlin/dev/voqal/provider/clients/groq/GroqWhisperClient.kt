@@ -1,11 +1,11 @@
 package dev.voqal.provider.clients.groq
 
 import com.aallam.openai.api.exception.OpenAITimeoutException
-import com.intellij.openapi.components.service
 import com.intellij.openapi.project.Project
 import dev.voqal.provider.SttProvider
 import dev.voqal.services.VoqalConfigService
 import dev.voqal.services.getVoqalLogger
+import dev.voqal.services.service
 import dev.voqal.utils.Iso639Language
 import io.ktor.client.*
 import io.ktor.client.plugins.*

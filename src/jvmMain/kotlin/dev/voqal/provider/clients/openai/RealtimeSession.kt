@@ -178,7 +178,7 @@ class RealtimeSession(
         if (newSession.toString() == activeSession.toString()) {
             return
         } else {
-            log.debug("Updating realtime session prompt")
+            log.debug { "Updating realtime session prompt" }
         }
         activeSession.mergeIn(newSession)
 
@@ -205,9 +205,9 @@ class RealtimeSession(
                             val json = JsonObject(frame.readText())
                             if (!json.getString("type").endsWith(".delta")) {
                                 if (json.getString("type") == "error") {
-                                    log.warn("Realtime error: $json")
+                                    log.warn { "Realtime error: $json" }
                                 } else {
-                                    log.trace("Realtime event: $json")
+                                    log.trace { "Realtime event: $json" }
                                 }
                             }
 
@@ -244,7 +244,7 @@ class RealtimeSession(
                                         if (readResponses.contains(responseId)) {
                                             return@launch
                                         } else {
-                                            log.info("Playing audio response: $responseId")
+                                            log.debug { "Playing audio response: $responseId" }
                                             readResponses.add(responseId)
                                             playingResponseId = responseId
                                         }

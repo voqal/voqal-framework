@@ -100,7 +100,7 @@ class ThreadMemorySystem(
 //            content = systemMessage.content
 //            role = systemMessage.role
 //        })
-        val userMessage = ChatMessage(ChatRole.User, "directive.developer.transcription") //todo: this
+        val userMessage = ChatMessage(ChatRole.User, directive.transcription)
         assistantProvider.message(ThreadId(threadId), messageRequest {
             content = userMessage.content
             role = userMessage.role

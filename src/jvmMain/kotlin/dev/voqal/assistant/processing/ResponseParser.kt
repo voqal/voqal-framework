@@ -18,56 +18,56 @@ import java.util.regex.Pattern
  */
 object ResponseParser {
 
-//    fun parseEditMode(
-//        chunk: ChatCompletionChunk,
-//        directive: VoqalDirective
-//    ): VoqalResponse {
-//        return parseEditMode(
-//            ChatCompletion(
-//                id = chunk.id,
-//                created = chunk.created.toLong(),
-//                model = chunk.model,
-//                choices = chunk.choices.map { it.toChatChoice() },
-//                usage = chunk.usage,
-//                systemFingerprint = chunk.systemFingerprint
-//            ), directive
-//        )
-//    }
-//
-//    private fun ChatChunk.toChatChoice(): ChatChoice {
-//        return ChatChoice(
-//            index = 0,
-//            message = ChatMessage(
-//                role = this.delta!!.role!!,
-//                messageContent = TextContent(this.delta!!.content!! + "\n```")
-//            )
-//        )
-//    }
-//
-//    fun parseEditMode(
-//        completion: ChatCompletion,
-//        directive: VoqalDirective
-//    ): VoqalResponse {
-//        val messageContent = completion.choices.firstOrNull()?.message?.messageContent
-//        val textContent = if (messageContent is TextContent) {
-//            messageContent.content
-//        } else {
-//            messageContent.toString()
-//        }
-//        val codeBlock = CodeExtractor.extractCodeBlock(textContent, false)
-//
-//        return VoqalResponse(
-//            directive, listOf(
-//                ToolCall.Function(
-//                    id = ToolId(EditTextTool.NAME),
-//                    function = FunctionCall(
-//                        nameOrNull = EditTextTool.NAME,
-//                        argumentsOrNull = JsonObject().put("text", codeBlock).toString()
-//                    )
-//                )
-//            ), completion
-//        )
-//    }
+    fun parseEditMode(
+        chunk: ChatCompletionChunk,
+        directive: VoqalDirective
+    ): VoqalResponse {
+        return parseEditMode(
+            ChatCompletion(
+                id = chunk.id,
+                created = chunk.created.toLong(),
+                model = chunk.model,
+                choices = chunk.choices.map { it.toChatChoice() },
+                usage = chunk.usage,
+                systemFingerprint = chunk.systemFingerprint
+            ), directive
+        )
+    }
+
+    private fun ChatChunk.toChatChoice(): ChatChoice {
+        return ChatChoice(
+            index = 0,
+            message = ChatMessage(
+                role = this.delta!!.role!!,
+                messageContent = TextContent(this.delta!!.content!! + "\n```")
+            )
+        )
+    }
+
+    fun parseEditMode(
+        completion: ChatCompletion,
+        directive: VoqalDirective
+    ): VoqalResponse {
+        val messageContent = completion.choices.firstOrNull()?.message?.messageContent
+        val textContent = if (messageContent is TextContent) {
+            messageContent.content
+        } else {
+            messageContent.toString()
+        }
+        val codeBlock = CodeExtractor.extractCodeBlock(textContent, false)
+
+        return VoqalResponse(
+            directive, listOf(
+                ToolCall.Function(
+                    id = ToolId("edit_text"), //todo: ToolId(EditTextTool.NAME),
+                    function = FunctionCall(
+                        nameOrNull = "edit_text", //todo: EditTextTool.NAME,
+                        argumentsOrNull = JsonObject().put("text", codeBlock).toString()
+                    )
+                )
+            ), completion
+        )
+    }
 
     fun parse(
         completion: ChatCompletion,
@@ -123,7 +123,18 @@ object ResponseParser {
                     } catch (_: Exception) {
                         JsonObject(CodeExtractor.extractCodeBlock(message.content!!))
                     }
-                    if (json.containsKey("tool") && json.containsKey("parameters")) {
+                    if (json.size() == 1 && json.containsKey("answer")) {
+                        val toolCalls = listOf(
+                            ToolCall.Function(
+                                id = ToolId("answer_question"), //todo: ToolId(AnswerQuestionTool.NAME),
+                                function = FunctionCall(
+                                    nameOrNull = "answer_question", //todo: AnswerQuestionTool.NAME,
+                                    argumentsOrNull = json.toString()
+                                )
+                            )
+                        )
+                        return VoqalResponse(directive, toolCalls, completion)
+                    } else if (json.containsKey("tool") && json.containsKey("parameters")) {
                         val toolCalls = listOf(
                             ToolCall.Function(
                                 id = ToolId(json.getString("tool")),
@@ -229,19 +240,19 @@ object ResponseParser {
                             .replace("\\n", "\n")
                             .replace("\\\"", "\"")
                         try {
-//                            val jsonObject = JsonObject(rawJson)
-//                            val toolCalls = listOf(
-//                                ToolCall.Function(
-//                                    id = ToolId(AnswerQuestionTool.NAME),
-//                                    function = FunctionCall(
-//                                        nameOrNull = AnswerQuestionTool.NAME,
-//                                        argumentsOrNull = JsonObject().apply {
-//                                            put("answer", jsonObject.getString("answer"))
-//                                        }.toString()
-//                                    )
-//                                )
-//                            )
-//                            return VoqalResponse(directive, toolCalls, completion)
+                            val jsonObject = JsonObject(rawJson)
+                            val toolCalls = listOf(
+                                ToolCall.Function(
+                                    id = ToolId("answer_question"), //todo: ToolId(AnswerQuestionTool.NAME),
+                                    function = FunctionCall(
+                                        nameOrNull = "answer_question", //todo: AnswerQuestionTool.NAME,
+                                        argumentsOrNull = JsonObject().apply {
+                                            put("answer", jsonObject.getString("answer"))
+                                        }.toString()
+                                    )
+                                )
+                            )
+                            return VoqalResponse(directive, toolCalls, completion)
                         } catch (_: Exception) {
                             try {
                                 val jsonArray = JsonArray(rawJson)
@@ -266,38 +277,38 @@ object ResponseParser {
                         }
                     } else if (looksLikeRawAnswerYaml(message.content!!)) {
                         try {
-//                            val rawYaml = message.content!!.substringAfter("```yaml").substringBefore("```")
-//                                .replace("\\r\\n", "\n")
-//                                .replace("\\n", "\n")
-//                                .replace("\\\"", "\"")
-//                            val parse = VoqalToolService.parseYaml(rawYaml)
-//                            val toolCalls = listOf(
-//                                ToolCall.Function(
-//                                    id = ToolId(AnswerQuestionTool.NAME),
-//                                    function = FunctionCall(
-//                                        nameOrNull = AnswerQuestionTool.NAME,
-//                                        argumentsOrNull = JsonObject().apply {
-//                                            put("answer", parse["answer"])
-//                                        }.toString()
-//                                    )
-//                                )
-//                            )
-//                            return VoqalResponse(directive, toolCalls, completion)
+                            val rawYaml = message.content!!.substringAfter("```yaml").substringBefore("```")
+                                .replace("\\r\\n", "\n")
+                                .replace("\\n", "\n")
+                                .replace("\\\"", "\"")
+                            val parse = VoqalToolService.parseYaml(rawYaml)
+                            val toolCalls = listOf(
+                                ToolCall.Function(
+                                    id = ToolId("answer_question"), //todo: ToolId(AnswerQuestionTool.NAME),
+                                    function = FunctionCall(
+                                        nameOrNull = "answer_question", //todo: AnswerQuestionTool.NAME,
+                                        argumentsOrNull = JsonObject().apply {
+                                            put("answer", parse["answer"])
+                                        }.toString()
+                                    )
+                                )
+                            )
+                            return VoqalResponse(directive, toolCalls, completion)
                         } catch (_: Exception) {
                         }
                     } else if (looksLikeAnswerQuestion(message.content!!)) {
-//                        val toolCalls = listOf(
-//                            ToolCall.Function(
-//                                id = ToolId(AnswerQuestionTool.NAME),
-//                                function = FunctionCall(
-//                                    nameOrNull = AnswerQuestionTool.NAME,
-//                                    argumentsOrNull = JsonObject().apply {
-//                                        put("answer", message.content)
-//                                    }.toString()
-//                                )
-//                            )
-//                        )
-//                        return VoqalResponse(directive, toolCalls, completion)
+                        val toolCalls = listOf(
+                            ToolCall.Function(
+                                id = ToolId("answer_question"), //todo: ToolId(AnswerQuestionTool.NAME),
+                                function = FunctionCall(
+                                    nameOrNull = "answer_question", //todo: AnswerQuestionTool.NAME,
+                                    argumentsOrNull = JsonObject().apply {
+                                        put("answer", message.content)
+                                    }.toString()
+                                )
+                            )
+                        )
+                        return VoqalResponse(directive, toolCalls, completion)
                     } else {
                         throw ResponseParseError(
                             completion,
@@ -306,17 +317,17 @@ object ResponseParser {
                     }
                 }
             } else {
-//                log.warn("Got message content and tool calls. Dropping tool calls and using message content as answer")
-//                val toolCalls = listOf(
-//                    ToolCall.Function(
-//                        id = (message.toolCalls!!.first() as ToolCall.Function).id,
-//                        function = FunctionCall(
-//                            nameOrNull = AnswerQuestionTool.NAME,
-//                            argumentsOrNull = message.content
-//                        )
-//                    )
-//                )
-//                return VoqalResponse(directive, toolCalls, completion)
+                log.warn("Got message content and tool calls. Dropping tool calls and using message content as answer")
+                val toolCalls = listOf(
+                    ToolCall.Function(
+                        id = (message.toolCalls!!.first() as ToolCall.Function).id,
+                        function = FunctionCall(
+                            nameOrNull = "answer_question", //todo: AnswerQuestionTool.NAME,
+                            argumentsOrNull = message.content
+                        )
+                    )
+                )
+                return VoqalResponse(directive, toolCalls, completion)
             }
         }
 

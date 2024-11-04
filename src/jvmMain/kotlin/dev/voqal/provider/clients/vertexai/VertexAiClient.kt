@@ -101,7 +101,7 @@ class VertexAiClient(
             ContentMaker.fromMultiModalData("Developer transcription attached", audio1)
         } else {
             log.debug("Using textual transcription")
-            ContentMaker.fromMultiModalData("directive.developer.transcription") //todo: this
+            ContentMaker.fromMultiModalData(directive.transcription)
         }
         val resp = try {
             chatSession.sendMessage(content)

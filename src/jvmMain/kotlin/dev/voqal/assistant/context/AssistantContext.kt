@@ -29,7 +29,7 @@ data class AssistantContext(
     val output: String? = null
 ) : VoqalContext {
 
-    fun toJson(directive: VoqalDirective): JsonObject {
+    override fun toJson(directive: VoqalDirective): JsonObject {
         return JsonObject().apply {
             put("includeToolsInMarkdown", promptSettings?.functionCalling == PromptSettings.FunctionCalling.MARKDOWN)
             put("availableTools", getVisibleTools(directive, availableActions))

@@ -76,6 +76,13 @@ class LocalMemorySlice(
         val request = if (messageList.isEmpty()) {
             if (addMessage) {
                 messageList.add(ChatMessage(ChatRole.System, systemPrompt))
+                if (promptSettings.separateInitialUserMessage) {
+                    if (directive.transcription.isNotEmpty()) {
+                        messageList.add(ChatMessage(ChatRole.User, directive.transcription))
+                    } else {
+                        log.debug { "No user transcription added" }
+                    }
+                }
             } else {
                 log.debug("No message added")
             }
@@ -113,7 +120,11 @@ class LocalMemorySlice(
             }
         } else {
             if (addMessage) {
-                messageList.add(ChatMessage(ChatRole.User, "directive.developer.transcription")) //todo: this
+                if (directive.transcription.isNotEmpty()) {
+                    messageList.add(ChatMessage(ChatRole.User, directive.transcription))
+                } else {
+                    log.debug("No user transcription added")
+                }
             } else {
                 log.debug("No message added")
             }
@@ -210,10 +221,24 @@ class LocalMemorySlice(
             } else {
                 messageContent.toString()
             }
-            messageList.add(ChatMessage(ChatRole.Assistant, textContent))
+            messageList.add(completion.choices.first().message)
+            val toolCalled = completion.choices.first().message.toolCalls?.firstOrNull() as ToolCall.Function?
+            if (toolCalled != null) {
+                val voqalTool = project.service<VoqalToolService>().getAvailableTools()[toolCalled.function.name]
+                if (voqalTool?.manualConfirm != true) {
+                    log.debug { "Auto-confirming tool call: ${toolCalled.function.name}" }
+                    messageList.add(
+                        ChatMessage(
+                            role = ChatRole.Tool,
+                            messageContent = TextContent(content = "success"),
+                            toolCallId = toolCalled.id
+                        )
+                    )
+                }
+            }
 
             val response = when (promptSettings.promptName) {
-//                "Edit Mode" -> ResponseParser.parseEditMode(completion, directive)
+                "Edit Mode" -> ResponseParser.parseEditMode(completion, directive)
                 else -> ResponseParser.parse(completion, directive)
             }
             if (aiProvider.isObservabilityProvider()) {
@@ -252,20 +277,7 @@ class LocalMemorySlice(
     }
 
     private fun getMessages(): List<ChatMessage> {
-        return messageList.map {
-            if (it.role == ChatRole.Assistant) {
-                if (it.messageContent == null) {
-                    it.copy(
-                        messageContent = TextContent(it.toolCalls.toString()),
-                        toolCalls = null
-                    )
-                } else {
-                    it
-                }
-            } else {
-                it
-            }
-        }
+        return messageList.toList() //use copy
     }
 
     private fun toChatCompletion(chunks: List<ChatCompletionChunk>, fullText: String): ChatCompletion {

@@ -2,11 +2,12 @@ package dev.voqal.assistant
 
 import com.intellij.openapi.project.Project
 import dev.voqal.assistant.context.AssistantContext
-import dev.voqal.assistant.context.UserContext
 import dev.voqal.assistant.context.VoqalContext
 import dev.voqal.assistant.template.VoqalTemplateEngine
 import dev.voqal.config.settings.LanguageModelSettings
-import dev.voqal.services.*
+import dev.voqal.services.VoqalConfigService
+import dev.voqal.services.VoqalDirectiveService
+import dev.voqal.services.service
 import io.vertx.core.json.JsonObject
 import kotlinx.serialization.json.Json
 import java.io.StringWriter
@@ -22,7 +23,7 @@ data class VoqalDirective(
 ) {
 
     val assistant: AssistantContext by lazy { contextMap["assistant"] as AssistantContext }
-    val userContext: UserContext by lazy { contextMap["user"] as UserContext }
+    var transcription: String = "" //todo: better
 
     val requestId by lazy { assistant.memorySlice.id }
     val directiveId by lazy { assistant.parentDirective?.assistant?.memorySlice?.id ?: assistant.memorySlice.id }
@@ -47,15 +48,18 @@ data class VoqalDirective(
     fun toMarkdown(promptTemplate: String): String {
         val compiledTemplate = VoqalTemplateEngine.getTemplate(promptTemplate)
         val writer = StringWriter()
-
-        val assistantMap = VoqalDirectiveService.convertJsonElementToMap(
-            Json.parseToJsonElement(assistant.toJson(this).toString())
+        compiledTemplate.evaluate(
+            writer, mutableMapOf<String, Any?>(
+                "directive" to this
+            ).apply {
+                contextMap.forEach { (key, value) ->
+                    val serializedContext = VoqalDirectiveService.convertJsonElementToMap(
+                        Json.parseToJsonElement(value.toJson(this@VoqalDirective).toString())
+                    )
+                    put(key, serializedContext)
+                }
+            }
         )
-        val contextMap = mutableMapOf(
-            "assistant" to assistantMap,
-            "directive" to this
-        )
-        compiledTemplate.evaluate(writer, contextMap)
         val fullPrompt = writer.toString()
 
         //merge empty new lines into single new line (ignoring code blocks)

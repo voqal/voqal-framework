@@ -1,12 +1,9 @@
 package dev.voqal.services
 
-import com.intellij.openapi.application.ApplicationManager
-
 import com.intellij.openapi.project.Project
 import dev.voqal.utils.SharedAudioCapture
 import io.github.oshai.kotlinlogging.KLogger
-import io.github.oshai.kotlinlogging.KotlinLogging
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
 import kotlin.reflect.KClass
 
 val Project.scope: CoroutineScope
@@ -15,6 +12,7 @@ val Project.scope: CoroutineScope
 fun Project.getVoqalLogger(kClass: KClass<*>): KLogger {
     throw UnsupportedOperationException()
 }
+
 //
 //val Project.messageBusConnection: MessageBusConnection
 //    get() = service<ProjectScopedService>().messageBusConnection
@@ -36,7 +34,5 @@ fun KLogger.errorChat(s: String, e: Throwable? = null) {
 }
 
 fun Project.invokeLater(action: () -> Unit) {
-    ApplicationManager.getApplication().invokeLater({
-        action()
-    }, disposed)
+    throw UnsupportedOperationException()
 }

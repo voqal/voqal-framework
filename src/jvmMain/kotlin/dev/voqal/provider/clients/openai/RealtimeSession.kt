@@ -281,7 +281,10 @@ class RealtimeSession(
                             } else if (json.getString("type") == "input_audio_buffer.speech_stopped") {
                                 log.info("Realtime speech stopped")
                             } else if (json.getString("type") == "conversation.item.input_audio_transcription.completed") {
-                                val transcript = json.getString("transcript")
+                                var transcript = json.getString("transcript")
+                                if (transcript.endsWith("\n")) {
+                                    transcript = transcript.substring(0, transcript.length - 1)
+                                }
                                 log.info("User transcript: $transcript")
                                 val chatContentManager = project.service<ChatToolWindowContentManager>()
                                 chatContentManager.addUserMessage(transcript)

@@ -6,7 +6,6 @@ import dev.voqal.assistant.focus.SpokenTranscript
 import dev.voqal.config.settings.VoiceDetectionSettings.VoiceDetectionProvider
 import dev.voqal.provider.AiProvider
 import dev.voqal.provider.StmProvider
-import dev.voqal.provider.clients.picovoice.NativesExtractor
 import dev.voqal.services.*
 import dev.voqal.status.VoqalStatus
 import dev.voqal.utils.SharedAudioCapture.AudioDetection.Companion.PRE_SPEECH_BUFFER_SIZE
@@ -339,7 +338,7 @@ class SharedAudioCapture(private val project: Project) {
                         }
 
                         val audioLengthMs = (mergedAudio.size.toDouble() / FORMAT.frameSize) * 1000.0 / SAMPLE_RATE
-                        log.info("Speech audio length: ${audioLengthMs}ms")
+                        log.debug { "Speech audio length: ${audioLengthMs}ms" }
 
                         val speechDir = File(configService.getConfig().speechToTextSettings.speechDir)
                         speechDir.mkdirs()
@@ -348,26 +347,7 @@ class SharedAudioCapture(private val project: Project) {
                         convertToWavFormat(mergedAudio, speechFile)
 
                         val directiveService = project.service<VoqalDirectiveService>()
-                        if (aiProvider.isSttProvider()) {
-                            val sttProvider = aiProvider.asSttProvider()
-                            if ((sttProvider as? AudioDataListener)?.isLiveDataListener() == true) {
-                                continue //already sent data
-                            }
-
-                            val sttModelName = configService.getConfig().speechToTextSettings.modelName
-                            try {
-                                val transcript = sttProvider.transcribe(speechFile, sttModelName)
-                                val spokenTranscript = SpokenTranscript(transcript, speechId, isFinal = true)
-                                log.info("Transcript: ${spokenTranscript.transcript}")
-                                directiveService.handleTranscription(spokenTranscript)
-                            } catch (e: OpenAIException) {
-                                val errorMessage = e.message ?: "An unknown error occurred"
-                                log.warnChat(errorMessage)
-                            } catch (e: Exception) {
-                                val errorMessage = e.message ?: "An unknown error occurred"
-                                log.errorChat(errorMessage, e)
-                            }
-                        } else if (modeProvider?.isStmProvider() == true) {
+                        if (modeProvider?.isStmProvider() == true) {
                             if ((modeProvider as? AudioDataListener)?.isLiveDataListener() == true) {
                                 continue //already sent data
                             }
@@ -387,6 +367,25 @@ class SharedAudioCapture(private val project: Project) {
                                 SpokenTranscript("", speechId),
                                 usingAudioModality = true
                             )
+                        } else if (aiProvider.isSttProvider()) {
+                            val sttProvider = aiProvider.asSttProvider()
+                            if ((sttProvider as? AudioDataListener)?.isLiveDataListener() == true) {
+                                continue //already sent data
+                            }
+
+                            val sttModelName = configService.getConfig().speechToTextSettings.modelName
+                            try {
+                                val transcript = sttProvider.transcribe(speechFile, sttModelName)
+                                val spokenTranscript = SpokenTranscript(transcript, speechId, isFinal = true)
+                                log.info("Transcript: ${spokenTranscript.transcript}")
+                                directiveService.handleTranscription(spokenTranscript)
+                            } catch (e: OpenAIException) {
+                                val errorMessage = e.message ?: "An unknown error occurred"
+                                log.warnChat(errorMessage)
+                            } catch (e: Exception) {
+                                val errorMessage = e.message ?: "An unknown error occurred"
+                                log.errorChat(errorMessage, e)
+                            }
                         } else {
                             log.warnChat("No speech-to-text provider available")
                         }

@@ -129,8 +129,11 @@ class RealtimeSession(
         val configService = project.service<VoqalConfigService>()
         val toolService = project.service<VoqalToolService>()
         val promptName = configService.getCurrentPromptMode()
-        var nopDirective = project.service<VoqalDirectiveService>()
-            .createDirective(SpokenTranscript("n/a", null), promptName = promptName)
+        var nopDirective = project.service<VoqalDirectiveService>().createDirective(
+            transcription = SpokenTranscript("n/a", null),
+            promptName = promptName,
+            usingAudioModality = true
+        )
         nopDirective = nopDirective.copy(
             contextMap = nopDirective.contextMap.toMutableMap().apply {
                 put(

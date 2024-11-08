@@ -195,7 +195,7 @@ class LocalMemorySlice(
                 llmProvider.streamChatCompletion(request, directive).collect {
                     chunks.add(it)
                     if (deltaRole == null) {
-                        deltaRole = it.choices[0].delta?.role
+                        deltaRole = it.choices.firstOrNull()?.delta?.role
                     }
                     fullText.append(it.choices.firstOrNull()?.delta?.content ?: "")
                     if (it.choices.firstOrNull()?.delta?.content?.contains("\n") in setOf(null, false)) {
@@ -208,7 +208,7 @@ class LocalMemorySlice(
                 chunkProcessingChannel.close()
                 processingJob.join()
 
-                completion = toChatCompletion(chunks, fullText.toString())
+                completion = toChatCompletion(deltaRole!!, chunks, fullText.toString())
             } else {
                 completion = llmProvider.chatCompletion(request, directive)
             }
@@ -280,9 +280,8 @@ class LocalMemorySlice(
         return messageList.toList() //use copy
     }
 
-    private fun toChatCompletion(chunks: List<ChatCompletionChunk>, fullText: String): ChatCompletion {
+    private fun toChatCompletion(role: Role, chunks: List<ChatCompletionChunk>, fullText: String): ChatCompletion {
         val chunk = chunks.last()
-        val role = chunks.first().choices.first().delta!!.role!!
         return ChatCompletion(
             id = chunk.id,
             created = chunk.created.toLong(),

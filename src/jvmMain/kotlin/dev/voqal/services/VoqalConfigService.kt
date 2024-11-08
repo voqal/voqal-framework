@@ -3,7 +3,8 @@ package dev.voqal.services
 import com.intellij.openapi.Disposable
 import dev.voqal.config.ConfigurableSettings
 import dev.voqal.config.VoqalConfig
-import dev.voqal.config.settings.*
+import dev.voqal.config.settings.LanguageModelSettings
+import dev.voqal.config.settings.PromptSettings
 import dev.voqal.provider.AiProvider
 import dev.voqal.utils.SharedAudioCapture
 import kotlinx.coroutines.CoroutineScope
@@ -13,6 +14,17 @@ import org.jetbrains.annotations.VisibleForTesting
  * Holds the project's current configuration.
  */
 interface VoqalConfigService {
+
+    companion object {
+        fun toHeaderMap(headerStr: String): Map<String, String> {
+            val headers = mutableMapOf<String, String>()
+            headerStr.split(",").filter { it.isNotEmpty() }.forEach {
+                val (key, value) = it.split(":")
+                headers[key] = value
+            }
+            return headers
+        }
+    }
 
     fun getScope(): CoroutineScope
 
@@ -49,15 +61,4 @@ interface VoqalConfigService {
     fun getPromptTemplate(promptName: String): String
 
     fun getCurrentPromptMode(): String
-
-    companion object {
-        fun toHeaderMap(headerStr: String): Map<String, String> {
-            val headers = mutableMapOf<String, String>()
-            headerStr.split(",").filter { it.isNotEmpty() }.forEach {
-                val (key, value) = it.split(":")
-                headers[key] = value
-            }
-            return headers
-        }
-    }
 }

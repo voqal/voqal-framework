@@ -145,18 +145,19 @@ class FireworksClient(
             )
         }
 
+        val responseBody = response.bodyAsText()
         try {
-            val error = response.body<OpenAIError>()
+            val error = jsonDecoder.decodeFromString<OpenAIError>(responseBody)
             throw InvalidRequestException(
                 response.status.value,
                 OpenAIError(OpenAIErrorDetails(message = error.detail?.message)),
-                ClientRequestException(response, response.bodyAsText())
+                ClientRequestException(response, responseBody)
             )
         } catch (_: Exception) {
             throw InvalidRequestException(
                 response.status.value,
-                OpenAIError(OpenAIErrorDetails(message = response.bodyAsText())),
-                ClientRequestException(response, response.bodyAsText())
+                OpenAIError(OpenAIErrorDetails(message = responseBody)),
+                ClientRequestException(response, responseBody)
             )
         }
     }

@@ -118,43 +118,49 @@ open class AzureClient(
     override suspend fun streamChatCompletion(
         request: ChatCompletionRequest,
         directive: VoqalDirective?
-    ): Flow<ChatCompletionChunk> = flow {
-        val requestJson = JsonObject(Json.encodeToJsonElement(request).toString())
-            .put("stream", true).put("stream_options", JsonObject().put("include_usage", true))
-        try {
-            client.preparePost(providerUrl) {
-                header("Content-Type", "application/json")
-                header("api-key", providerKey) //Azure OpenAI Connection
-                header("Authorization", providerKey) //Serverless
-                header("voqal-model-name", deployment)
-                setBody(requestJson.encode())
-            }.execute { response ->
-                throwIfError(response)
+    ): Flow<ChatCompletionChunk> {
+        if (realtimeSession != null) {
+            return realtimeSession.streamChatCompletion(request, directive)
+        }
 
-                var hasError = false
-                val channel: ByteReadChannel = response.body()
-                while (!channel.isClosedForRead) {
-                    val line = channel.readUTF8Line()?.takeUnless { it.isEmpty() } ?: continue
+        return flow {
+            val requestJson = JsonObject(Json.encodeToJsonElement(request).toString())
+                .put("stream", true).put("stream_options", JsonObject().put("include_usage", true))
+            try {
+                client.preparePost(providerUrl) {
+                    header("Content-Type", "application/json")
+                    header("api-key", providerKey) //Azure OpenAI Connection
+                    header("Authorization", providerKey) //Serverless
+                    header("voqal-model-name", deployment)
+                    setBody(requestJson.encode())
+                }.execute { response ->
+                    throwIfError(response)
 
-                    if (line == "event: error") {
-                        hasError = true
-                        continue
-                    } else if (hasError) {
-                        val errorJson = JsonObject(line.substringAfter("data: "))
-                        log.warn("Received error while streaming completions: $errorJson")
+                    var hasError = false
+                    val channel: ByteReadChannel = response.body()
+                    while (!channel.isClosedForRead) {
+                        val line = channel.readUTF8Line()?.takeUnless { it.isEmpty() } ?: continue
 
-                        val statusCode = errorJson.getJsonObject("error").getInteger("status_code")
-                        throw UnknownAPIException(statusCode, jsonDecoder.decodeFromString(errorJson.toString()))
-                    }
+                        if (line == "event: error") {
+                            hasError = true
+                            continue
+                        } else if (hasError) {
+                            val errorJson = JsonObject(line.substringAfter("data: "))
+                            log.warn("Received error while streaming completions: $errorJson")
 
-                    val chunkJson = line.substringAfter("data: ")
-                    if (chunkJson != "[DONE]") {
-                        emit(jsonDecoder.decodeFromString(chunkJson))
+                            val statusCode = errorJson.getJsonObject("error").getInteger("status_code")
+                            throw UnknownAPIException(statusCode, jsonDecoder.decodeFromString(errorJson.toString()))
+                        }
+
+                        val chunkJson = line.substringAfter("data: ")
+                        if (chunkJson != "[DONE]") {
+                            emit(jsonDecoder.decodeFromString(chunkJson))
+                        }
                     }
                 }
+            } catch (e: HttpRequestTimeoutException) {
+                throw OpenAITimeoutException(e)
             }
-        } catch (e: HttpRequestTimeoutException) {
-            throw OpenAITimeoutException(e)
         }
     }
 

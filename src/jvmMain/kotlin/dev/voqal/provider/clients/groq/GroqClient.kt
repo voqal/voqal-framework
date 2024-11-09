@@ -23,6 +23,7 @@ import io.vertx.core.json.JsonObject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.encodeToJsonElement
 
 class GroqClient(
     override val name: String,
@@ -134,6 +135,9 @@ class GroqClient(
         val requestJson = JsonObject()
             .put("model", request.model.id)
             .put("messages", JsonArray(request.messages.map { it.toJson() }))
+        if (request.tools != null) {
+            requestJson.put("tools", JsonArray(request.tools!!.map { JsonObject(Json.encodeToJsonElement(it).toString()) }))
+        }
         return requestJson
     }
 

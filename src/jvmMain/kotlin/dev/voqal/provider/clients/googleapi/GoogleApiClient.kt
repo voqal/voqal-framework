@@ -11,8 +11,9 @@ import dev.voqal.assistant.memory.local.asDirectiveTool
 import dev.voqal.config.settings.PromptSettings.FunctionCalling
 import dev.voqal.provider.LlmProvider
 import dev.voqal.provider.StmProvider
-import dev.voqal.provider.clients.picovoice.NativesExtractor
+import dev.voqal.services.VoqalConfigService
 import dev.voqal.services.getVoqalLogger
+import dev.voqal.services.service
 import io.ktor.client.*
 import io.ktor.client.call.*
 import io.ktor.client.plugins.*
@@ -33,7 +34,7 @@ import java.util.*
 
 class GoogleApiClient(
     override val name: String,
-    project: Project,
+    private val project: Project,
     private val providerKey: String
 ) : LlmProvider, StmProvider {
 
@@ -161,7 +162,11 @@ class GoogleApiClient(
                 val functionDeclarations = toolsArray.map {
                     val jsonObject = it as JsonObject
                     jsonObject.remove("type")
-                    jsonObject.getJsonObject("function")
+                    jsonObject.getJsonObject("function").apply {
+                        if (getJsonObject("parameters").isEmpty) {
+                            remove("parameters")
+                        }
+                    }
                 }
                 add(JsonObject().put("function_declarations", JsonArray(functionDeclarations)))
             })
@@ -171,9 +176,9 @@ class GoogleApiClient(
         if (directive?.assistant?.speechId != null && directive.assistant.usingAudioModality) {
             log.debug("Using audio modality")
             val speechId = directive.assistant.speechId
-            val speechDirectory = File(NativesExtractor.workingDirectory, "speech")
-            speechDirectory.mkdirs()
-            val speechFile = File(speechDirectory, "developer-$speechId.wav")
+            val speechDir = File(project.service<VoqalConfigService>().getConfig().speechToTextSettings.speechDir)
+            speechDir.mkdirs()
+            val speechFile = File(speechDir, "developer-$speechId.wav")
             val audio1Bytes = speechFile.readBytes()
 
             //add audio bytes to last contents/parts
@@ -248,12 +253,30 @@ class GoogleApiClient(
             val jsonObject = jsonElement as JsonObject
             val content = jsonObject.getJsonObject("content")
             val parts = content.getJsonArray("parts")
-            val text = parts.getJsonObject(0).getString("text") //todo: other parts?
+            val partObject = parts.getJsonObject(0)
+            var toolCalls: List<ToolCall>? = null
+            val messageContent = if (partObject.containsKey("functionCall")) {
+                val funcCall = partObject.getJsonObject("functionCall")
+                toolCalls = listOf(
+                    ToolCall.Function(
+                        id = ToolId(funcCall.getString("name")),
+                        function = FunctionCall(
+                            nameOrNull = funcCall.getString("name"),
+                            argumentsOrNull = funcCall.getJsonObject("args").toString()
+                        )
+                    )
+                )
+                null
+            } else {
+                val text = partObject.getString("text") //todo: other parts?
+                TextContent(text)
+            }
             ChatChoice(
                 index = index,
                 ChatMessage(
                     if (content.getString("role") == "model") Role.Assistant else Role.User,
-                    TextContent(text)
+                    messageContent = messageContent,
+                    toolCalls = toolCalls
                 )
             )
         }

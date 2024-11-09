@@ -21,10 +21,12 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.utils.io.*
+import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.encodeToJsonElement
 import java.util.*
 
 class OllamaClient(
@@ -66,11 +68,30 @@ class OllamaClient(
 
         throwIfError(response)
         val responseBody = response.bodyAsText()
+        val message = JsonObject(responseBody).getJsonObject("message")
+        var toolCalls: List<ToolCall>? = null
+        val messageContent = if (message.containsKey("tool_calls")) {
+            val calls = message.getJsonArray("tool_calls")
+            toolCalls = calls.map {
+                val funcCall = (it as JsonObject).getJsonObject("function")
+                ToolCall.Function(
+                    id = ToolId(funcCall.getString("name")),
+                    function = FunctionCall(
+                        nameOrNull = funcCall.getString("name"),
+                        argumentsOrNull = funcCall.getJsonObject("arguments").toString()
+                    )
+                )
+            }
+            null
+        } else {
+            TextContent(message.getString("content"))
+        }
         val choice = ChatChoice(
             index = 0,
             ChatMessage(
                 ChatRole.Assistant,
-                TextContent(JsonObject(responseBody).getString("response"))
+                messageContent = messageContent,
+                toolCalls = toolCalls
             )
         )
         val completion = ChatCompletion(
@@ -127,7 +148,13 @@ class OllamaClient(
     private fun toRequestJson(request: ChatCompletionRequest): JsonObject {
         val requestJson = JsonObject()
             .put("model", request.model.id)
-            .put("prompt", request.messages.first().content) //todo: not using history
+            .put("messages", JsonArray(request.messages.map { it.toJson() }))
+        if (request.tools != null) {
+            requestJson.put(
+                "tools",
+                JsonArray(request.tools!!.map { JsonObject(Json.encodeToJsonElement(it).toString()) })
+            )
+        }
         return requestJson
     }
 
@@ -150,4 +177,5 @@ class OllamaClient(
     override fun isStreamable() = true
     override fun getAvailableModelNames() = MODELS
     override fun dispose() = client.close()
+    private fun ChatMessage.toJson() = JsonObject().put("role", role.role.lowercase()).put("content", content)
 }

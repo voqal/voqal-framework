@@ -42,7 +42,9 @@ class MistralAiClient(
             "mistral-small-latest",
             "open-mixtral-8x22b",
             "open-mixtral-8x7b",
-            "open-mistral-7b"
+            "open-mistral-7b",
+            "ministral-8b-latest",
+            "ministral-3b-latest"
         )
 
         @JvmStatic

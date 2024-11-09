@@ -3,7 +3,7 @@ package dev.voqal.config.settings
 import dev.voqal.config.ConfigurableSettings
 import io.vertx.core.json.JsonObject
 
-data class PluginSettings(
+data class MicrophoneSettings(
     val enabled: Boolean = true,
     val microphoneName: String = "",
     val pauseOnFocusLost: Boolean = true
@@ -26,11 +26,11 @@ data class PluginSettings(
         }
     }
 
-    override fun withKeysRemoved(): PluginSettings {
+    override fun withKeysRemoved(): MicrophoneSettings {
         return copy()
     }
 
-    override fun withPiiRemoved(): PluginSettings {
+    override fun withPiiRemoved(): MicrophoneSettings {
         return withKeysRemoved().copy(microphoneName = if (microphoneName.isEmpty()) "" else "***")
     }
 }

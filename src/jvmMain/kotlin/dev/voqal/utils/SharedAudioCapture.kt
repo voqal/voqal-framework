@@ -97,23 +97,23 @@ class SharedAudioCapture(private val project: Project) {
         log.debug("Using audio format: $FORMAT")
         val configService = project.service<VoqalConfigService>()
         val config = configService.getConfig()
-        if (config.pluginSettings.microphoneName == "") {
+        if (config.microphoneSettings.microphoneName == "") {
             val availableMicrophones = getAvailableMicrophones()
             if (availableMicrophones.isNotEmpty()) {
                 configService.updateConfig(
-                    config.pluginSettings.copy(
+                    config.microphoneSettings.copy(
                         microphoneName = availableMicrophones.first().name
                     )
                 )
             }
         } else {
-            microphoneName = config.pluginSettings.microphoneName
+            microphoneName = config.microphoneSettings.microphoneName
         }
-        if (config.pluginSettings.enabled) {
+        if (config.microphoneSettings.enabled) {
             startCapture()
         }
 
-        var enabled = config.pluginSettings.enabled
+        var enabled = config.microphoneSettings.enabled
         val statusService = project.service<VoqalStatusService>()
         statusService.onStatusChange { it, _ ->
             if (!enabled && it == VoqalStatus.IDLE) {
@@ -131,7 +131,7 @@ class SharedAudioCapture(private val project: Project) {
             }
         }
 
-        var vadProvider = configService.getConfig().voiceDetectionSettings.provider
+        var vadProvider: VoiceDetectionProvider? = null
         configService.onConfigChange {
             val newVadProvider = it.voiceDetectionSettings.provider
             if (vadProvider == VoiceDetectionProvider.NONE && newVadProvider != VoiceDetectionProvider.NONE) {
@@ -168,7 +168,7 @@ class SharedAudioCapture(private val project: Project) {
             val configService = project.service<VoqalConfigService>()
             val config = configService.getConfig()
             configService.updateConfig(
-                config.pluginSettings.copy(
+                config.microphoneSettings.copy(
                     microphoneName = microphoneName
                 )
             )
@@ -177,7 +177,7 @@ class SharedAudioCapture(private val project: Project) {
         }
     }
 
-    private fun startCapture() {
+    fun startCapture() {
         if (System.getProperty("VQL_TEST_MODE") == "true") return
         log.debug("Starting shared audio capture")
         active = true
@@ -222,6 +222,7 @@ class SharedAudioCapture(private val project: Project) {
                 return
             }
             log.debug("Available microphones: $availableMicrophones")
+            microphoneName = configService.getConfig().microphoneSettings.microphoneName
             if (microphoneName.isEmpty()) {
                 log.info("Using default microphone")
             } else {
@@ -229,6 +230,7 @@ class SharedAudioCapture(private val project: Project) {
             }
 
             val mixerInfo = availableMicrophones.firstOrNull { it.name == microphoneName }
+                ?: availableMicrophones.firstOrNull()
             val line = if (mixerInfo != null) {
                 SharedAudioSystem.getTargetDataLine(project, FORMAT, mixerInfo)
             } else {

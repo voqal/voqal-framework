@@ -14,8 +14,6 @@ import java.io.StringWriter
 
 /**
  * Represents a processable command for Voqal.
- *
- * @property assistant Holds the current configuration of the assistant.
  */
 data class VoqalDirective(
     val project: Project,
@@ -98,7 +96,9 @@ data class VoqalDirective(
 
     fun toJson(): JsonObject {
         return JsonObject().apply {
-            put("assistant", assistant.toJson(this@VoqalDirective))
+            contextMap.forEach { (key, value) ->
+                put(key, value.toJson(this@VoqalDirective))
+            }
         }
     }
 

@@ -4,7 +4,7 @@ import dev.voqal.config.settings.*
 import io.vertx.core.json.JsonObject
 
 open class VoqalConfig(
-    val pluginSettings: PluginSettings = PluginSettings(),
+    val microphoneSettings: MicrophoneSettings = MicrophoneSettings(),
     val voiceDetectionSettings: VoiceDetectionSettings = VoiceDetectionSettings(),
     val speechToTextSettings: SpeechToTextSettings = SpeechToTextSettings(),
     val languageModelsSettings: LanguageModelsSettings = LanguageModelsSettings(),
@@ -16,9 +16,9 @@ open class VoqalConfig(
      * Need to set defaults so config changes don't reset stored config due to parse error.
      */
     constructor(json: JsonObject) : this(
-        pluginSettings = json.getJsonObject("pluginSettings")?.let {
-            PluginSettings(it)
-        } ?: PluginSettings(),
+        microphoneSettings = json.getJsonObject("microphoneSettings")?.let {
+            MicrophoneSettings(it)
+        } ?: MicrophoneSettings(),
         voiceDetectionSettings = json.getJsonObject("voiceDetectionSettings")?.let {
             VoiceDetectionSettings(it)
         } ?: VoiceDetectionSettings(),
@@ -38,7 +38,7 @@ open class VoqalConfig(
 
     override fun toJson(): JsonObject {
         return JsonObject().apply {
-            put("pluginSettings", pluginSettings.toJson())
+            put("microphoneSettings", microphoneSettings.toJson())
             put("voiceDetectionSettings", voiceDetectionSettings.toJson())
             put("speechToTextSettings", speechToTextSettings.toJson())
             put("languageModelsSettings", languageModelsSettings.toJson())
@@ -49,7 +49,7 @@ open class VoqalConfig(
 
     override fun withKeysRemoved(): VoqalConfig {
         return VoqalConfig(
-            pluginSettings = pluginSettings.withKeysRemoved(),
+            microphoneSettings = microphoneSettings.withKeysRemoved(),
             voiceDetectionSettings = voiceDetectionSettings.withKeysRemoved(),
             speechToTextSettings = speechToTextSettings.withKeysRemoved(),
             languageModelsSettings = languageModelsSettings.withKeysRemoved(),
@@ -60,7 +60,7 @@ open class VoqalConfig(
 
     override fun withPiiRemoved(): ConfigurableSettings {
         return VoqalConfig(
-            pluginSettings = pluginSettings.withPiiRemoved(),
+            microphoneSettings = microphoneSettings.withPiiRemoved(),
             voiceDetectionSettings = voiceDetectionSettings.withPiiRemoved(),
             speechToTextSettings = speechToTextSettings.withPiiRemoved(),
             languageModelsSettings = languageModelsSettings.withPiiRemoved(),
@@ -70,7 +70,7 @@ open class VoqalConfig(
     }
 
     open fun copy(
-        pluginSettings: PluginSettings = this.pluginSettings,
+        microphoneSettings: MicrophoneSettings = this.microphoneSettings,
         voiceDetectionSettings: VoiceDetectionSettings = this.voiceDetectionSettings,
         speechToTextSettings: SpeechToTextSettings = this.speechToTextSettings,
         languageModelsSettings: LanguageModelsSettings = this.languageModelsSettings,
@@ -78,7 +78,7 @@ open class VoqalConfig(
         promptLibrarySettings: PromptLibrarySettings = this.promptLibrarySettings
     ): VoqalConfig {
         return VoqalConfig(
-            pluginSettings = pluginSettings,
+            microphoneSettings = microphoneSettings,
             voiceDetectionSettings = voiceDetectionSettings,
             speechToTextSettings = speechToTextSettings,
             languageModelsSettings = languageModelsSettings,

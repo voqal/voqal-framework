@@ -1,7 +1,6 @@
 package dev.voqal.config.settings
 
 import dev.voqal.config.ConfigurableSettings
-import dev.voqal.config.settings.PromptSettings.FunctionCalling
 import io.vertx.core.json.JsonObject
 
 data class PromptLibrarySettings(

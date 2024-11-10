@@ -5,7 +5,7 @@ interface ApplicationManager {
         fun getApplication(): Application {
             return object : Application {
                 override val isUnitTestMode: Boolean
-                    get() = false
+                    get() = TODO("Not yet implemented")
             }
         }
     }

@@ -5,9 +5,6 @@ interface Disposer {
         fun register(parent: Disposable, child: Disposable) {
         }
 
-        fun register(parent: Disposable, exec: () -> Unit) {
-        }
-
         fun newDisposable(): Disposable {
             throw UnsupportedOperationException()
         }

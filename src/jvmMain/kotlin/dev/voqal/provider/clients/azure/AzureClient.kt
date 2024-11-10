@@ -4,9 +4,9 @@ import com.aallam.openai.api.chat.ChatCompletion
 import com.aallam.openai.api.chat.ChatCompletionChunk
 import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.exception.*
-import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.Disposer
+import dev.voqal.core.Project
 import dev.voqal.assistant.VoqalDirective
+import dev.voqal.core.Disposer
 import dev.voqal.provider.LlmProvider
 import dev.voqal.provider.StmProvider
 import dev.voqal.provider.clients.openai.RealtimeSession

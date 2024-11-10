@@ -1,7 +1,7 @@
 package dev.voqal.utils
 
 import com.aallam.openai.api.exception.OpenAIException
-import com.intellij.openapi.project.Project
+import dev.voqal.core.Project
 import dev.voqal.assistant.focus.SpokenTranscript
 import dev.voqal.config.settings.VoiceDetectionSettings.VoiceDetectionProvider
 import dev.voqal.provider.AiProvider

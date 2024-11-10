@@ -1,9 +1,9 @@
 package dev.voqal.services
 
-import com.intellij.openapi.Disposable
-import com.intellij.openapi.editor.Editor
 import dev.voqal.assistant.memory.MemorySlice
 import dev.voqal.config.settings.PromptSettings
+import dev.voqal.core.Disposable
+import dev.voqal.core.Editor
 
 /**
  * Manages persistent and temporary memory for Voqal.

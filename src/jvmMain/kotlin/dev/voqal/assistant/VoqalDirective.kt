@@ -1,10 +1,10 @@
 package dev.voqal.assistant
 
-import com.intellij.openapi.project.Project
 import dev.voqal.assistant.context.AssistantContext
 import dev.voqal.assistant.context.VoqalContext
 import dev.voqal.assistant.template.VoqalTemplateEngine
 import dev.voqal.config.settings.LanguageModelSettings
+import dev.voqal.core.Project
 import dev.voqal.services.VoqalConfigService
 import dev.voqal.services.VoqalDirectiveService
 import dev.voqal.services.service

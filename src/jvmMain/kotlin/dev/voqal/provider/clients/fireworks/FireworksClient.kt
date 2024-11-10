@@ -2,7 +2,7 @@ package dev.voqal.provider.clients.fireworks
 
 import com.aallam.openai.api.chat.*
 import com.aallam.openai.api.exception.*
-import com.intellij.openapi.project.Project
+import dev.voqal.core.Project
 import dev.voqal.assistant.VoqalDirective
 import dev.voqal.provider.LlmProvider
 import dev.voqal.services.getVoqalLogger

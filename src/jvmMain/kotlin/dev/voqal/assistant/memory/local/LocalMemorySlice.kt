@@ -6,14 +6,14 @@ import com.aallam.openai.api.core.Role
 import com.aallam.openai.api.exception.OpenAIAPIException
 import com.aallam.openai.api.model.ModelId
 import com.funnysaltyfish.partialjsonparser.PartialJsonParser
-import com.intellij.openapi.application.ApplicationManager
-import com.intellij.openapi.project.Project
 import dev.voqal.assistant.VoqalDirective
 import dev.voqal.assistant.VoqalResponse
 import dev.voqal.assistant.memory.ContextUpdate
 import dev.voqal.assistant.memory.MemorySlice
 import dev.voqal.assistant.processing.ResponseParser
 import dev.voqal.config.settings.PromptSettings.FunctionCalling
+import dev.voqal.core.ApplicationManager
+import dev.voqal.core.Project
 import dev.voqal.services.*
 import io.vertx.core.json.JsonObject
 import kotlinx.coroutines.CoroutineScope

@@ -2,12 +2,12 @@ package dev.voqal.provider.clients.openai
 
 import com.aallam.openai.api.chat.*
 import com.aallam.openai.api.model.ModelId
-import com.intellij.openapi.Disposable
-import com.intellij.openapi.project.Project
-import com.intellij.util.concurrency.ThreadingAssertions
+import dev.voqal.core.Project
 import dev.voqal.assistant.VoqalDirective
 import dev.voqal.assistant.focus.SpokenTranscript
 import dev.voqal.config.settings.PromptSettings.FunctionCalling
+import dev.voqal.core.Disposable
+import dev.voqal.core.ThreadingAssertions
 import dev.voqal.services.*
 import dev.voqal.utils.SharedAudioCapture
 import io.ktor.client.*

@@ -1,15 +1,6 @@
 package dev.voqal.assistant.processing
 
-import com.intellij.diff.DiffContentFactory
-import com.intellij.diff.fragments.LineFragmentImpl
-import com.intellij.diff.requests.SimpleDiffRequest
-import com.intellij.diff.tools.simple.SimpleDiffChange
-import com.intellij.diff.tools.util.base.TextDiffSettingsHolder
-import com.intellij.diff.util.DiffUtil
-import com.intellij.openapi.progress.EmptyProgressIndicator
-import com.intellij.openapi.project.Project
-import com.intellij.openapi.util.Disposer
-import com.intellij.openapi.util.TextRange
+import dev.voqal.core.*
 import io.vertx.core.json.JsonObject
 import java.util.regex.Pattern
 

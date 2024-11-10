@@ -1,7 +1,7 @@
 package dev.voqal.provider
 
 import com.aallam.openai.api.chat.ChatCompletionRequest
-import com.intellij.openapi.project.Project
+import dev.voqal.core.Project
 import dev.voqal.assistant.VoqalResponse
 import dev.voqal.services.scope
 import kotlinx.coroutines.launch

@@ -1,6 +1,6 @@
 package dev.voqal.provider.clients.assemblyai
 
-import com.intellij.openapi.project.Project
+import dev.voqal.core.Project
 import dev.voqal.provider.SttProvider
 import dev.voqal.services.getVoqalLogger
 import io.ktor.client.*

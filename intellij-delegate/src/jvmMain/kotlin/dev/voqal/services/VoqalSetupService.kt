@@ -1,11 +1,11 @@
 package dev.voqal.services
 
-import com.intellij.openapi.components.ComponentManager
+import dev.voqal.core.Project
 
-fun ComponentManager.getVoqalService(clazz: Class<*>): Any {
+fun Project.getVoqalService(clazz: Class<*>): Any {
     throw UnsupportedOperationException()
 }
 
-inline fun <reified T> ComponentManager.service(): T {
+inline fun <reified T> Project.service(): T {
     return getVoqalService(T::class.java) as T
 }

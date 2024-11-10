@@ -1,6 +1,6 @@
 package dev.voqal.provider.clients.voqal
 
-import com.intellij.openapi.project.Project
+import dev.voqal.core.Project
 import dev.voqal.provider.clients.azure.AzureClient
 
 class VoqalProClient(

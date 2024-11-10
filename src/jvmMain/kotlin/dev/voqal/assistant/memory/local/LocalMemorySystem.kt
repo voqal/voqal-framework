@@ -1,6 +1,6 @@
 package dev.voqal.assistant.memory.local
 
-import com.intellij.openapi.project.Project
+import dev.voqal.core.Project
 import dev.voqal.assistant.memory.MemorySlice
 import dev.voqal.assistant.memory.MemorySystem
 import dev.voqal.services.getVoqalLogger

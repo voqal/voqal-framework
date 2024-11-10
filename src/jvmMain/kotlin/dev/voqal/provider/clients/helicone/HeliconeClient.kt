@@ -4,7 +4,7 @@ import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.chat.ToolCall
 import com.aallam.openai.api.exception.OpenAIAPIException
 import com.aallam.openai.api.exception.OpenAIServerException
-import com.intellij.openapi.project.Project
+import dev.voqal.core.Project
 import dev.voqal.assistant.VoqalResponse
 import dev.voqal.provider.ObservabilityProvider
 import dev.voqal.services.getVoqalLogger

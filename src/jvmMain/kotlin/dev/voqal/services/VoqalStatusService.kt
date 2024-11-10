@@ -1,7 +1,7 @@
 package dev.voqal.services
 
-import com.intellij.openapi.Disposable
 import dev.voqal.assistant.VoqalResponse
+import dev.voqal.core.Disposable
 import dev.voqal.status.VoqalStatus
 
 /**

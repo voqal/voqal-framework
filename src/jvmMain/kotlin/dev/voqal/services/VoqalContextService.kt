@@ -1,10 +1,10 @@
 package dev.voqal.services
 
-import com.intellij.formatting.Block
-import com.intellij.openapi.editor.Editor
-import com.intellij.openapi.util.TextRange
-import com.intellij.psi.PsiFile
 import dev.voqal.assistant.VoqalDirective
+import dev.voqal.core.Block
+import dev.voqal.core.Editor
+import dev.voqal.core.TextRange
+import dev.voqal.core.psi.PsiFile
 
 /**
  * Used to ensure LLM prompts do not contain ignored files or exceed token limits.

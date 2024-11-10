@@ -1,6 +1,6 @@
 package dev.voqal.provider
 
-import com.intellij.openapi.project.Project
+import dev.voqal.core.Project
 import dev.voqal.services.getVoqalLogger
 import dev.voqal.utils.SharedAudioCapture
 import java.util.*

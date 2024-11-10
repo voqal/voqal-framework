@@ -1,6 +1,6 @@
 package dev.voqal.provider
 
-import dev.voqal.core.Disposable
+import com.intellij.openapi.Disposable
 
 /**
  * Provider that offers various AI services.

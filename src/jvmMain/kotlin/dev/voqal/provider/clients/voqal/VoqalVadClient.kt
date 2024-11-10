@@ -1,6 +1,6 @@
 package dev.voqal.provider.clients.voqal
 
-import dev.voqal.core.Project
+import com.intellij.openapi.project.Project
 import dev.voqal.provider.VadProvider
 import dev.voqal.services.audioCapture
 import dev.voqal.services.getVoqalLogger

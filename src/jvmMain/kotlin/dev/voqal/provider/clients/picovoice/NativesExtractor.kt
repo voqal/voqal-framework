@@ -1,8 +1,8 @@
 package dev.voqal.provider.clients.picovoice
 
 import com.google.common.io.Resources
-import dev.voqal.core.PathManager
-import dev.voqal.core.Project
+import com.intellij.openapi.application.PathManager
+import com.intellij.openapi.project.Project
 import dev.voqal.services.getVoqalLogger
 import org.apache.commons.io.FileUtils
 import java.io.BufferedOutputStream

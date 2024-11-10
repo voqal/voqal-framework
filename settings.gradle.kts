@@ -4,4 +4,3 @@ plugins {
 rootProject.name = "voqal-assistant-framework"
 
 include("intellij-delegate")
-include("intellij-core")

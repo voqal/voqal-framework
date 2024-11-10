@@ -23,9 +23,9 @@ import com.aallam.openai.api.thread.ThreadRequest
 import com.aallam.openai.client.LoggingConfig
 import com.aallam.openai.client.OpenAI
 import com.aallam.openai.client.OpenAIConfig
-import dev.voqal.core.Project
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import dev.voqal.assistant.VoqalDirective
-import dev.voqal.core.Disposer
 import dev.voqal.provider.*
 import dev.voqal.services.*
 import dev.voqal.utils.Iso639Language

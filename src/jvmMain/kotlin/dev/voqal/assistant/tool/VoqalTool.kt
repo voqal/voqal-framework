@@ -2,7 +2,7 @@ package dev.voqal.assistant.tool
 
 import com.aallam.openai.api.chat.FunctionCall
 import com.aallam.openai.api.chat.Tool
-import dev.voqal.core.Project
+import com.intellij.openapi.project.Project
 import dev.voqal.assistant.VoqalDirective
 import dev.voqal.assistant.focus.DetectedIntent
 import dev.voqal.assistant.focus.SpokenTranscript

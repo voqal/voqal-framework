@@ -1,11 +1,11 @@
 package dev.voqal.services
 
 import com.aallam.openai.api.chat.ToolCall
+import com.intellij.openapi.actionSystem.AnAction
 import dev.voqal.assistant.VoqalResponse
 import dev.voqal.assistant.focus.DetectedIntent
 import dev.voqal.assistant.focus.SpokenTranscript
 import dev.voqal.assistant.tool.VoqalTool
-import dev.voqal.core.AnAction
 import io.vertx.core.json.JsonObject
 import org.yaml.snakeyaml.Yaml
 import java.io.StringReader

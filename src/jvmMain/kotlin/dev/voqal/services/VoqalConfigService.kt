@@ -1,10 +1,10 @@
 package dev.voqal.services
 
+import com.intellij.openapi.Disposable
 import dev.voqal.config.ConfigurableSettings
 import dev.voqal.config.VoqalConfig
 import dev.voqal.config.settings.LanguageModelSettings
 import dev.voqal.config.settings.PromptSettings
-import dev.voqal.core.Disposable
 import dev.voqal.provider.AiProvider
 import dev.voqal.utils.SharedAudioCapture
 import kotlinx.coroutines.CoroutineScope

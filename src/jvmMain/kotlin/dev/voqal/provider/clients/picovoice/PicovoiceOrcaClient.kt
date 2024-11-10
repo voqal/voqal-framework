@@ -1,7 +1,7 @@
 package dev.voqal.provider.clients.picovoice
 
 import com.aallam.openai.api.audio.SpeechRequest
-import dev.voqal.core.Project
+import com.intellij.openapi.project.Project
 import com.sun.jna.Pointer
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.ptr.PointerByReference

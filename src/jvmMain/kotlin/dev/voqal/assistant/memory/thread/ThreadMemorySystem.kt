@@ -12,7 +12,7 @@ import com.aallam.openai.api.thread.Thread
 import com.aallam.openai.api.thread.ThreadId
 import com.aallam.openai.api.thread.ThreadRequest
 import com.aallam.openai.api.vectorstore.VectorStoreId
-import dev.voqal.core.Project
+import com.intellij.openapi.project.Project
 import dev.voqal.assistant.VoqalDirective
 import dev.voqal.assistant.VoqalResponse
 import dev.voqal.assistant.memory.MemorySlice

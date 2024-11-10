@@ -3,7 +3,7 @@ package dev.voqal.provider.clients.huggingface
 import com.aallam.openai.api.chat.ChatCompletion
 import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.aallam.openai.api.exception.*
-import dev.voqal.core.Project
+import com.intellij.openapi.project.Project
 import dev.voqal.assistant.VoqalDirective
 import dev.voqal.provider.LlmProvider
 import dev.voqal.services.getVoqalLogger

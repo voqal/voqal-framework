@@ -24,6 +24,7 @@ configure<PublishingExtension> {
 repositories {
     mavenCentral()
     maven("https://s01.oss.sonatype.org/content/repositories/releases/")
+    maven("https://www.jetbrains.com/intellij-repository/releases/")
 }
 
 dependencies {
@@ -54,6 +55,34 @@ kotlin {
                 compileOnly(libs.jna)
                 compileOnly(libs.snakeyaml)
                 compileOnly("io.github.funnysaltyfish:partial-json-parser:1.0.2")
+
+                compileOnly("com.jetbrains.intellij.platform:code-style:242.23726.103") {
+                    isTransitive = false
+                }
+                compileOnly("com.jetbrains.intellij.platform:core:242.23726.103") {
+                    isTransitive = false
+                }
+                compileOnly("com.jetbrains.intellij.platform:diff:242.23726.103") {
+                    isTransitive = false
+                }
+                compileOnly("com.jetbrains.intellij.platform:diff-impl:242.23726.103") {
+                    isTransitive = false
+                }
+                compileOnly("com.jetbrains.intellij.platform:editor:242.23726.103") {
+                    isTransitive = false
+                }
+                compileOnly("com.jetbrains.intellij.platform:extensions:242.23726.103") {
+                    isTransitive = false
+                }
+                compileOnly("com.jetbrains.intellij.platform:util:242.23726.103") {
+                    isTransitive = false
+                }
+                compileOnly("com.jetbrains.intellij.platform:util-base:242.23726.103") {
+                    isTransitive = false
+                }
+                compileOnly("com.jetbrains.intellij.platform:util-diff:242.23726.103") {
+                    isTransitive = false
+                }
             }
         }
     }

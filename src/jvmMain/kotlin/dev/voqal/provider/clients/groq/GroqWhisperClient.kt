@@ -1,7 +1,7 @@
 package dev.voqal.provider.clients.groq
 
 import com.aallam.openai.api.exception.OpenAITimeoutException
-import dev.voqal.core.Project
+import com.intellij.openapi.project.Project
 import dev.voqal.provider.SttProvider
 import dev.voqal.services.VoqalConfigService
 import dev.voqal.services.getVoqalLogger

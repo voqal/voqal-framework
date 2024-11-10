@@ -1,7 +1,7 @@
 package dev.voqal.provider.clients
 
-import dev.voqal.core.Project
-import dev.voqal.core.Disposer
+import com.intellij.openapi.project.Project
+import com.intellij.openapi.util.Disposer
 import dev.voqal.provider.*
 import dev.voqal.services.VoqalConfigService
 import dev.voqal.services.service

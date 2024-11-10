@@ -1,7 +1,7 @@
 package dev.voqal.provider.clients.deepseek
 
 import com.aallam.openai.client.OpenAIConfig
-import dev.voqal.core.Project
+import com.intellij.openapi.project.Project
 import dev.voqal.provider.clients.openai.OpenAiClient
 
 class DeepSeekClient(

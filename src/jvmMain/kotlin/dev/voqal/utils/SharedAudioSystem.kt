@@ -1,6 +1,6 @@
 package dev.voqal.utils
 
-import dev.voqal.core.Project
+import com.intellij.openapi.project.Project
 import dev.voqal.services.getVoqalLogger
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue

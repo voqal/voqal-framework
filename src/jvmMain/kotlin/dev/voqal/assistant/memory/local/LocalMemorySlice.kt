@@ -276,7 +276,7 @@ class LocalMemorySlice(
                         log.debug { "Sending final context update to listener" }
                         listener.invoke(ContextUpdate(result, true))
                     }
-                } catch (e: Throwable) {
+                } catch (e: Throwable) {//todo: ```json {} ```
                     log.warn("Failed to parse tool call arguments: ${e.message}")
                 }
             } else {

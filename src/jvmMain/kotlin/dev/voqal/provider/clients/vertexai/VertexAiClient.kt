@@ -19,8 +19,9 @@ import com.intellij.openapi.project.Project
 import dev.voqal.assistant.VoqalDirective
 import dev.voqal.provider.LlmProvider
 import dev.voqal.provider.StmProvider
-import dev.voqal.provider.clients.picovoice.NativesExtractor
+import dev.voqal.services.VoqalConfigService
 import dev.voqal.services.getVoqalLogger
+import dev.voqal.services.service
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
@@ -28,7 +29,7 @@ import java.io.FileInputStream
 
 class VertexAiClient(
     override val name: String,
-    project: Project,
+    private val project: Project,
     projectId: String,
     location: String
 ) : LlmProvider, StmProvider {
@@ -85,9 +86,9 @@ class VertexAiClient(
 
         val content = if (directive.assistant.speechId != null && directive.assistant.usingAudioModality) {
             val speechId = directive.assistant.speechId
-            val speechDirectory = File(NativesExtractor.workingDirectory, "speech")
-            speechDirectory.mkdirs()
-            val speechFile = File(speechDirectory, "developer-$speechId.wav")
+            val speechDir = File(project.service<VoqalConfigService>().getConfig().speechToTextSettings.speechDir)
+            speechDir.mkdirs()
+            val speechFile = File(speechDir, "developer-$speechId.wav")
             val audio1Bytes = ByteArray(speechFile.length().toInt())
             withContext(Dispatchers.IO) {
                 FileInputStream(speechFile).use { audio1FileInputStream ->

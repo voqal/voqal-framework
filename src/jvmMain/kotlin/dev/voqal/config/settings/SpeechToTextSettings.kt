@@ -1,6 +1,7 @@
 package dev.voqal.config.settings
 
 import dev.voqal.config.ConfigurableSettings
+import dev.voqal.config.ConfigurableSettings.Companion.getDefaultVoqalHome
 import dev.voqal.utils.Iso639Language
 import io.vertx.core.json.JsonObject
 import java.io.File
@@ -14,7 +15,7 @@ data class SpeechToTextSettings(
     val queryParams: String = "",
     val language: Iso639Language = Iso639Language.ENGLISH,
     val streamAudio: Boolean = true,
-    val speechDir: String = File(System.getProperty("java.io.tmpdir"), "speech").absolutePath
+    val speechDir: String = File(getDefaultVoqalHome(), "speech").absolutePath
 ) : ConfigurableSettings {
 
     /**
@@ -29,7 +30,7 @@ data class SpeechToTextSettings(
         queryParams = json.getString("queryParams", ""),
         language = Iso639Language.findByCode(json.getString("language", Iso639Language.ENGLISH.code)),
         streamAudio = json.getBoolean("streamAudio", true),
-        speechDir = json.getString("speechDir", File(System.getProperty("java.io.tmpdir"), "speech").absolutePath)
+        speechDir = json.getString("speechDir", File(getDefaultVoqalHome(), "speech").absolutePath)
     )
 
     override fun toJson(): JsonObject {

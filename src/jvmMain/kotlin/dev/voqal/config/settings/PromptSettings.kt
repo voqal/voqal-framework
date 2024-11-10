@@ -1,6 +1,7 @@
 package dev.voqal.config.settings
 
 import dev.voqal.config.ConfigurableSettings
+import dev.voqal.config.ConfigurableSettings.Companion.getDefaultVoqalHome
 import io.vertx.core.json.JsonObject
 import java.io.File
 
@@ -20,7 +21,7 @@ data class PromptSettings(
     val editFormat: EditFormat = EditFormat.FULL_TEXT,
     val streamCompletions: Boolean = false,
     val functionCalling: FunctionCalling = FunctionCalling.MARKDOWN,
-    val toolsDir: String = File(File(System.getProperty("user.home"), ".voqal"), "tools").absolutePath,
+    val toolsDir: String = File(getDefaultVoqalHome(), "tools").absolutePath,
     val separateInitialUserMessage: Boolean = false
 ) : ConfigurableSettings {
 
@@ -43,7 +44,7 @@ data class PromptSettings(
         editFormat = EditFormat.valueOf(json.getString("editFormat", EditFormat.FULL_TEXT.name)),
         streamCompletions = json.getBoolean("streamCompletions", false),
         functionCalling = FunctionCalling.lenientValueOf(json.getString("functionCalling", FunctionCalling.MARKDOWN.name)),
-        toolsDir = json.getString("toolsDir", File(File(System.getProperty("user.home"), ".voqal"), "tools").absolutePath),
+        toolsDir = json.getString("toolsDir", File(getDefaultVoqalHome(), "tools").absolutePath),
         separateInitialUserMessage = json.getBoolean("separateInitialUserMessage", false)
     )
 

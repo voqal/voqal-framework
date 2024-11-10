@@ -42,9 +42,8 @@ object NativesExtractor {
             return
         } catch (_: Exception) {
         }
-        val tmpDir = File(File(System.getProperty("java.io.tmpdir")), "voqal-natives")
-        if (!tmpDir.exists()) {
-            tmpDir.mkdirs()
+        if (!workingDirectory.exists()) {
+            workingDirectory.mkdirs()
         }
 
         val startTime = System.currentTimeMillis()
@@ -54,7 +53,7 @@ object NativesExtractor {
                 val file = enumEntries.nextElement() as JarEntry
                 if (!file.name.startsWith("natives")) continue
 
-                val f = File(tmpDir, file.name.substringAfter("natives/"))
+                val f = File(workingDirectory, file.name.substringAfter("natives/"))
                 if (f.exists() && f.isFile) {
                     log.trace("Deleting existing file: $f")
                     f.delete()

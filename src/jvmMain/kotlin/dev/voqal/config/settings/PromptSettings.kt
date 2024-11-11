@@ -22,7 +22,8 @@ data class PromptSettings(
     val streamCompletions: Boolean = false,
     val functionCalling: FunctionCalling = FunctionCalling.MARKDOWN,
     val toolsDir: String = File(getDefaultVoqalHome(), "tools").absolutePath,
-    val separateInitialUserMessage: Boolean = false
+    val separateInitialUserMessage: Boolean = false,
+    val editMode: Boolean = false
 ) : ConfigurableSettings {
 
     /**
@@ -45,7 +46,8 @@ data class PromptSettings(
         streamCompletions = json.getBoolean("streamCompletions", false),
         functionCalling = FunctionCalling.lenientValueOf(json.getString("functionCalling", FunctionCalling.MARKDOWN.name)),
         toolsDir = json.getString("toolsDir", File(getDefaultVoqalHome(), "tools").absolutePath),
-        separateInitialUserMessage = json.getBoolean("separateInitialUserMessage", false)
+        separateInitialUserMessage = json.getBoolean("separateInitialUserMessage", false),
+        editMode = json.getBoolean("editMode", false)
     )
 
     override fun toJson(): JsonObject {
@@ -67,6 +69,7 @@ data class PromptSettings(
             put("functionCalling", functionCalling.name)
             put("toolsDir", toolsDir)
             put("separateInitialUserMessage", separateInitialUserMessage)
+            put("editMode", editMode)
         }
     }
 

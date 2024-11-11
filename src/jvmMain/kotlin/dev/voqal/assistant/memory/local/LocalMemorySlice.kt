@@ -64,11 +64,11 @@ class LocalMemorySlice(
         val systemPrompt = directive.toMarkdown()
         if (log.isTraceEnabled) log.trace("${promptSettings.promptName}: $systemPrompt")
 
-        if (promptSettings.promptName == "Edit Mode") {
+        if (promptSettings.promptName == "Edit Mode" || promptSettings.editMode) {
             project.service<VoqalStatusService>().updateText("Querying AI provider: ${lmSettings.name}")
         }
         var includeToolsInMarkdown = promptSettings.functionCalling == FunctionCalling.MARKDOWN
-        if (promptSettings.promptName == "Edit Mode") {
+        if (promptSettings.promptName == "Edit Mode" || promptSettings.editMode) {
             includeToolsInMarkdown = true //todo: edit mode doesn't support function calls
         }
 
@@ -307,8 +307,11 @@ class LocalMemorySlice(
                 }
             }
 
-            val response = when (promptSettings.promptName) {
-                "Edit Mode" -> ResponseParser.parseEditMode(completion, directive)
+            val response = when {
+                promptSettings.promptName == "Edit Mode" || promptSettings.editMode -> {
+                    ResponseParser.parseEditMode(completion, directive)
+                }
+
                 else -> ResponseParser.parse(completion, directive)
             }
             if (aiProvider.isObservabilityProvider()) {

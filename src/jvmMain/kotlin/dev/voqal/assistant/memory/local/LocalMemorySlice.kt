@@ -10,7 +10,7 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import dev.voqal.assistant.VoqalDirective
 import dev.voqal.assistant.VoqalResponse
-import dev.voqal.assistant.memory.ContextUpdate
+import dev.voqal.assistant.tool.ContextUpdate
 import dev.voqal.assistant.memory.MemorySlice
 import dev.voqal.assistant.processing.ResponseParser
 import dev.voqal.config.settings.PromptSettings.FunctionCalling

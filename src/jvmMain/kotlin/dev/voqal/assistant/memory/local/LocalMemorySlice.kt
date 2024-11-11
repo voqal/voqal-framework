@@ -266,23 +266,23 @@ class LocalMemorySlice(
                 processingJob.join()
 
                 completion = toChatCompletion(deltaRole!!, deltaToolCall, chunks, fullText.toString())
-
-                try {
-                    //todo: could just use JsonObject()
-                    val toolCall = completion.choices.first().message.toolCalls!!.first() as ToolCall.Function
-                    val result = PartialJsonParser.parse(toolCall.function.arguments) as Map<String, Any>
-                    val listener = partialContextListeners[toolCall.function.name]
-                    if (listener != null) {
-                        log.debug { "Sending final context update to listener" }
-                        listener.invoke(ContextUpdate(result, true))
-                    }
-                } catch (e: Throwable) {//todo: ```json {} ```
-                    log.warn("Failed to parse tool call arguments: ${e.message}")
-                }
             } else {
                 completion = llmProvider.chatCompletion(request, directive)
             }
             val responseTime = System.currentTimeMillis()
+
+            try {
+                //todo: could just use JsonObject()
+                val toolCall = completion.choices.first().message.toolCalls!!.first() as ToolCall.Function
+                val result = PartialJsonParser.parse(toolCall.function.arguments) as Map<String, Any>
+                val listener = partialContextListeners[toolCall.function.name]
+                if (listener != null) {
+                    log.debug { "Sending final context update to listener" }
+                    listener.invoke(ContextUpdate(result, true))
+                }
+            } catch (e: Throwable) {//todo: ```json {} ```
+                log.warn("Failed to parse tool call arguments: ${e.message}")
+            }
 
             //todo: check other choices
             val messageContent = completion.choices.firstOrNull()?.message?.messageContent

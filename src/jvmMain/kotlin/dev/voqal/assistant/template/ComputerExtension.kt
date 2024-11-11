@@ -9,6 +9,7 @@ import java.util.*
 import java.util.function.Supplier
 
 class ComputerExtension : AbstractExtension() {
+
     override fun getGlobalVariables(): Map<String, Any> {
         return mapOf(
             "computer" to mapOf(

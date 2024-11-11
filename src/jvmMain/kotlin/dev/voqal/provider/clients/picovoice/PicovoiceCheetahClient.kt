@@ -88,9 +88,8 @@ class PicovoiceCheetahClient(
 
                 val partialTranscript = partialTranscriptRef.value.getString(0)
                 if (partialTranscript.isNotEmpty()) {
-                    log.debug("Partial transcript: $partialTranscript")
                     currentTranscription.append(partialTranscript)
-                    dispatchPartialTranscript()
+                    dispatchPartialTranscript(partialTranscript)
                 }
                 native.pv_cheetah_transcript_delete(partialTranscriptRef.value)
 
@@ -128,8 +127,7 @@ class PicovoiceCheetahClient(
         }
     }
 
-    private fun dispatchPartialTranscript() {
-        val partialTranscript = currentTranscription.toString()
+    private fun dispatchPartialTranscript(partialTranscript: String) {
         project.scope.launch {
             val aiProvider = project.service<VoqalConfigService>().getAiProvider()
             val speechId = aiProvider.asVadProvider().speechId

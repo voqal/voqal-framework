@@ -5,6 +5,7 @@ import com.intellij.openapi.application.PathManager
 import com.intellij.openapi.project.Project
 import dev.voqal.services.getVoqalLogger
 import org.apache.commons.io.FileUtils
+import org.apache.commons.io.IOUtils
 import java.io.BufferedOutputStream
 import java.io.File
 import java.net.URL
@@ -14,6 +15,7 @@ import java.util.jar.JarFile
 object NativesExtractor {
 
     private var nativesExtracted = false
+
     //todo: this is nativesDirectory, make /tmp/voqal the working directory
     @JvmStatic
     var workingDirectory = File(File(System.getProperty("java.io.tmpdir")), "voqal-natives")
@@ -30,11 +32,11 @@ object NativesExtractor {
     fun extractNatives(project: Project) {
         val log = project.getVoqalLogger(this::class)
         if (nativesExtracted) {
-            log.debug("Picovoice natives already extracted")
+            log.debug { "Picovoice natives already extracted" }
             return
         }
 
-        log.debug("Extracting Picovoice natives")
+        log.debug { "Extracting Picovoice natives" }
         nativesExtracted = true
         try {
             val natives = Resources.getResource("natives")
@@ -53,25 +55,25 @@ object NativesExtractor {
                 val file = enumEntries.nextElement() as JarEntry
                 if (!file.name.startsWith("natives")) continue
 
-                val f = File(workingDirectory, file.name.substringAfter("natives/"))
-                if (f.exists() && f.isFile) {
-                    log.trace("Deleting existing file: $f")
-                    f.delete()
-                    if (f.exists()) {
-                        log.warn("Failed to delete file: $f")
-                        continue
-                    }
-                } else if (file.isDirectory) {
-                    if (!f.exists()) {
-                        log.trace("Creating directory: $f")
-                        f.mkdirs()
+                val targetFile = File(workingDirectory, file.name.substringAfter("natives/"))
+                if (file.isDirectory) {
+                    if (!targetFile.exists()) {
+                        log.trace { "Creating directory: $targetFile" }
+                        targetFile.mkdirs()
                     }
                     continue
                 }
-                log.debug("Extracting file: $f")
 
+                if (targetFile.exists() && targetFile.isFile) {
+                    if (IOUtils.contentEquals(jar.getInputStream(file), FileUtils.openInputStream(targetFile))) {
+                        log.trace { "Skipping file: $targetFile" }
+                        continue
+                    }
+                }
+
+                log.debug { "Extracting file: $targetFile" }
                 jar.getInputStream(file).use { inputStream ->
-                    BufferedOutputStream(FileUtils.openOutputStream(f)).use { outputStream ->
+                    BufferedOutputStream(FileUtils.openOutputStream(targetFile)).use { outputStream ->
                         val buffer = ByteArray(4096)
                         var bytesRead: Int
                         while (inputStream.read(buffer).also { bytesRead = it } != -1) {
@@ -82,7 +84,7 @@ object NativesExtractor {
             }
         }
 
-        log.debug("Extracted Picovoice natives in ${System.currentTimeMillis() - startTime}ms")
+        log.debug { "Extracted Picovoice natives in ${System.currentTimeMillis() - startTime}ms" }
     }
 
     private fun extractResource(resourceUrl: URL, destinationDir: String) {

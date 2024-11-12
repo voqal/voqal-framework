@@ -113,6 +113,8 @@ class RealtimeSession(
                         updateSession()
                     } catch (e: ParserException) {
                         log.warn("Failed to update session: ${e.message}")
+                    } catch (e: Throwable) {
+                        log.warn("Failed to update session", e)
                     }
                     delay(500)
                 }

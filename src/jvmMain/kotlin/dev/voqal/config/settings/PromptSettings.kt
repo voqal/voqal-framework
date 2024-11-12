@@ -1,9 +1,7 @@
 package dev.voqal.config.settings
 
 import dev.voqal.config.ConfigurableSettings
-import dev.voqal.config.ConfigurableSettings.Companion.getDefaultVoqalHome
 import io.vertx.core.json.JsonObject
-import java.io.File
 
 data class PromptSettings(
     val provider: PProvider = PProvider.VOQAL,
@@ -21,7 +19,6 @@ data class PromptSettings(
     val editFormat: EditFormat = EditFormat.FULL_TEXT,
     val streamCompletions: Boolean = false,
     val functionCalling: FunctionCalling = FunctionCalling.MARKDOWN,
-    val toolsDir: String = File(getDefaultVoqalHome(), "tools").absolutePath,
     val separateInitialUserMessage: Boolean = false,
     val editMode: Boolean = false
 ) : ConfigurableSettings {
@@ -45,7 +42,6 @@ data class PromptSettings(
         editFormat = EditFormat.valueOf(json.getString("editFormat", EditFormat.FULL_TEXT.name)),
         streamCompletions = json.getBoolean("streamCompletions", false),
         functionCalling = FunctionCalling.lenientValueOf(json.getString("functionCalling", FunctionCalling.MARKDOWN.name)),
-        toolsDir = json.getString("toolsDir", File(getDefaultVoqalHome(), "tools").absolutePath),
         separateInitialUserMessage = json.getBoolean("separateInitialUserMessage", false),
         editMode = json.getBoolean("editMode", false)
     )
@@ -67,7 +63,6 @@ data class PromptSettings(
             put("editFormat", editFormat.name)
             put("streamCompletions", streamCompletions)
             put("functionCalling", functionCalling.name)
-            put("toolsDir", toolsDir)
             put("separateInitialUserMessage", separateInitialUserMessage)
             put("editMode", editMode)
         }
@@ -82,8 +77,7 @@ data class PromptSettings(
             promptFile = if (promptFile.isEmpty()) "" else "***",
             promptText = if (promptText.isEmpty()) "" else "***",
             promptUrl = if (promptUrl.isEmpty()) "" else "***",
-            languageModel = if (languageModel.isEmpty()) "" else "***",
-            toolsDir = if (toolsDir.isEmpty()) "" else "***",
+            languageModel = if (languageModel.isEmpty()) "" else "***"
         )
     }
 

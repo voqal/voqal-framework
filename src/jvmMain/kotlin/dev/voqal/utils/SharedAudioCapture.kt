@@ -212,10 +212,6 @@ class SharedAudioCapture(private val project: Project) {
         try {
             val testMode = listeners.any { it.isTestListener() }
             val configService = project.service<VoqalConfigService>()
-            if (!testMode && configService.getConfig().voiceDetectionSettings.provider == VoiceDetectionProvider.NONE) {
-                log.warn { "No voice detection provider available" }
-                return
-            }//todo: server VAD
             val availableMicrophones = getAvailableMicrophones()
             if (availableMicrophones.isEmpty()) {
                 log.warn { "No microphone available" }

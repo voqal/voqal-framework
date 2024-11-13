@@ -8,6 +8,7 @@ import com.intellij.util.concurrency.ThreadingAssertions
 import dev.voqal.assistant.VoqalDirective
 import dev.voqal.assistant.focus.SpokenTranscript
 import dev.voqal.config.settings.PromptSettings.FunctionCalling
+import dev.voqal.config.settings.VoiceDetectionSettings.VoiceDetectionProvider
 import dev.voqal.services.*
 import dev.voqal.utils.SharedAudioCapture
 import io.ktor.client.*
@@ -62,8 +63,14 @@ class RealtimeSession(
     private val responseQueue = LinkedBlockingQueue<Promise<Any>>()
     private val deltaQueue = LinkedBlockingQueue<Promise<FlowCollector<String>>>()
     private val deltaMap = mutableMapOf<String, Any>()
+    private var serverVad = false
 
     init {
+        val config = project.service<VoqalConfigService>().getConfig()
+        if (config.voiceDetectionSettings.provider == VoiceDetectionProvider.NONE) {
+            serverVad = true
+        }
+
         restartConnection()
     }
 
@@ -176,12 +183,14 @@ class RealtimeSession(
                 JsonObject(jsonEncoder.encodeToJsonElement(it).toString())
                     .put("type", "function")
             }))
-            if (azureHost) {
-                put("turn_detection", JsonObject().apply {
-                    put("type", "none")
-                })
-            } else {
-                put("turn_detection", null)
+            if (!serverVad) {
+                if (azureHost) {
+                    put("turn_detection", JsonObject().apply {
+                        put("type", "none")
+                    })
+                } else {
+                    put("turn_detection", null)
+                }
             }
         }
         if (newSession.toString() == activeSession.toString()) {
@@ -425,6 +434,11 @@ class RealtimeSession(
     }
 
     fun onAudioData(data: ByteArray, detection: SharedAudioCapture.AudioDetection) {
+        if (serverVad) {
+            audioQueue.put(data)
+            return
+        }
+
         if (detection.speechDetected.get()) {
             if (playingResponseId != null) {
                 log.warn("Sending response cancel")

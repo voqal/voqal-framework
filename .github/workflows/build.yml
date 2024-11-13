@@ -66,18 +66,18 @@ jobs:
 #        release_name: v${{ env.VOQAL_RELEASE_VERSION }}
 #        draft: true
 
-    - name: Remove Old Snapshot Packages
-      if: github.ref == 'refs/heads/master'
-      uses: smartsquaregmbh/delete-old-packages@v0.8.1
-      with:
-        organization: voqal
-        type: maven
-        keep: 0
-        version-pattern: "^\\d+\\.\\d+\\.\\d+-SNAPSHOT$"
-        names: |
-          dev.voqal.voqal-framework
-          dev.voqal.voqal-framework-js
-          dev.voqal.voqal-framework-jvm
+#    - name: Remove Old Snapshot Packages
+#      if: github.ref == 'refs/heads/master'
+#      uses: smartsquaregmbh/delete-old-packages@v0.8.1
+#      with:
+#        organization: voqal
+#        type: maven
+#        keep: 0
+#        version-pattern: "^\\d+\\.\\d+\\.\\d+-SNAPSHOT$"
+#        names: |
+#          dev.voqal.voqal-framework
+#          dev.voqal.voqal-framework-js
+#          dev.voqal.voqal-framework-jvm
 
     - name: Publish New Snapshot Packages
       if: github.ref == 'refs/heads/master'

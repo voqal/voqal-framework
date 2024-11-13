@@ -94,7 +94,7 @@ class SharedAudioCapture(private val project: Project) {
     }
 
     init {
-        log.debug("Using audio format: $FORMAT")
+        log.debug { "Using audio format: $FORMAT" }
         val configService = project.service<VoqalConfigService>()
         val config = configService.getConfig()
         if (config.microphoneSettings.microphoneName == "") {
@@ -135,11 +135,11 @@ class SharedAudioCapture(private val project: Project) {
         configService.onConfigChange {
             val newVadProvider = it.voiceDetectionSettings.provider
             if (vadProvider == VoiceDetectionProvider.NONE && newVadProvider != VoiceDetectionProvider.NONE) {
-                log.info("Voice detection enabled")
+                log.info { "Voice detection enabled" }
                 vadProvider = newVadProvider
                 restart()
             } else if (vadProvider != VoiceDetectionProvider.NONE && newVadProvider == VoiceDetectionProvider.NONE) {
-                log.info("Voice detection disabled")
+                log.info { "Voice detection disabled" }
                 vadProvider = newVadProvider
                 restart()
             }
@@ -149,7 +149,7 @@ class SharedAudioCapture(private val project: Project) {
                 configService.getConfig().promptLibrarySettings.prompts.forEach {
                     val provider = aiProvider.findProvider(it.languageModel)
                     if (provider == null) {
-                        log.warn("Unable to find provider: " + it.languageModel)
+                        log.warn { "Unable to find provider: " + it.languageModel }
                     } else {
                         modeProviders[it.promptName] = provider
                     }
@@ -179,7 +179,7 @@ class SharedAudioCapture(private val project: Project) {
 
     fun startCapture() {
         if (System.getProperty("VQL_TEST_MODE") == "true") return
-        log.debug("Starting shared audio capture")
+        log.debug { "Starting shared audio capture" }
         active = true
         thread = Thread { captureAudio() }.apply {
             name = "Voqal Shared Audio Capture"
@@ -192,20 +192,20 @@ class SharedAudioCapture(private val project: Project) {
         //ensure no dupe listeners
         val listenersOfSameType = listeners.filter { it::class == listener::class }
         if (listener.isTestListener() && listenersOfSameType.any { it.isTestListener() }) {
-            log.warn("Test listener already registered")
+            log.warn { "Test listener already registered" }
             return
         } else if (!listener.isTestListener() && listenersOfSameType.any { !it.isTestListener() }) {
-            log.warn("Listener already registered")
+            log.warn { "Listener already registered" }
             return
         }
 
         listeners.add(listener)
-        log.debug("Added audio data listeners. Active listeners: ${listeners.size}")
+        log.debug { "Added audio data listeners. Active listeners: ${listeners.size}" }
     }
 
     fun removeListener(listener: AudioDataListener) {
         listeners.remove(listener)
-        log.debug("Removed audio data listener. Active listeners: ${listeners.size}")
+        log.debug { "Removed audio data listener. Active listeners: ${listeners.size}" }
     }
 
     private fun captureAudio() {
@@ -213,20 +213,20 @@ class SharedAudioCapture(private val project: Project) {
             val testMode = listeners.any { it.isTestListener() }
             val configService = project.service<VoqalConfigService>()
             if (!testMode && configService.getConfig().voiceDetectionSettings.provider == VoiceDetectionProvider.NONE) {
-                log.warn("No voice detection provider available")
+                log.warn { "No voice detection provider available" }
                 return
             }//todo: server VAD
             val availableMicrophones = getAvailableMicrophones()
             if (availableMicrophones.isEmpty()) {
-                log.warn("No microphone available")
+                log.warn { "No microphone available" }
                 return
             }
-            log.debug("Available microphones: $availableMicrophones")
+            log.debug { "Available microphones: $availableMicrophones" }
             microphoneName = configService.getConfig().microphoneSettings.microphoneName
             if (microphoneName.isEmpty()) {
-                log.info("Using default microphone")
+                log.info { "Using default microphone" }
             } else {
-                log.info("Using microphone: $microphoneName")
+                log.info { "Using microphone: $microphoneName" }
             }
 
             val mixerInfo = availableMicrophones.firstOrNull { it.name == microphoneName }
@@ -261,7 +261,7 @@ class SharedAudioCapture(private val project: Project) {
             configService.getConfig().promptLibrarySettings.prompts.forEach {
                 val provider = aiProvider.findProvider(it.languageModel)
                 if (provider == null) {
-                    log.warn("Unable to find provider: " + it.languageModel)
+                    log.warn { "Unable to find provider: " + it.languageModel }
                 } else {
                     modeProviders[it.promptName] = provider
                 }
@@ -294,17 +294,17 @@ class SharedAudioCapture(private val project: Project) {
                     }
 
                     if (!voiceCaptured && audioDetection.voiceCaptured.get()) {
-                        log.debug("Voice captured. Frame: ${audioData.index}")
+                        log.debug { "Voice captured. Frame: ${audioData.index}" }
                         voiceCaptured = true
                     } else if (!speechDetected && voiceCaptured &&
                         !audioDetection.voiceCaptured.get() && !audioDetection.voiceDetected.get()
                     ) {
-                        log.debug("Insufficient voice captured. Frame: ${audioData.index}")
+                        log.debug { "Insufficient voice captured. Frame: ${audioData.index}" }
                         voiceCaptured = false
                     }
                     if (audioDetection.speechDetected.get()) {
                         if (audioDetection.framesBeforeVoiceDetected.isNotEmpty()) {
-                            log.info("Developer started talking. Frame: ${audioData.index}")
+                            log.debug { "Developer started talking. Frame: ${audioData.index}" }
                             speechDetected = true
                             audioDetection.framesBeforeVoiceDetected.forEach {
                                 capturedVoice.add(it)
@@ -313,17 +313,17 @@ class SharedAudioCapture(private val project: Project) {
                         }
                         capturedVoice.add(audioData)
                     } else if (speechDetected && !audioDetection.speechDetected.get()) {
-                        log.info("Developer stopped talking. Frame: ${audioData.index}")
+                        log.debug { "Developer stopped talking. Frame: ${audioData.index}" }
                         capturedVoice.add(audioData)
 
                         //ensure captured voice has no skipped frames
                         val firstFrameIndex = capturedVoice.first().index
                         for (i in 0 until capturedVoice.size) {
                             if (capturedVoice[i].index != firstFrameIndex + i) {
-                                log.warn("Skipped frame detected: ${capturedVoice[i].index}")
+                                log.warn { "Skipped frame detected: ${capturedVoice[i].index}" }
                             }
                         }
-                        log.debug("Captured voice frames: $firstFrameIndex - ${capturedVoice.last().index}")
+                        log.debug { "Captured voice frames: $firstFrameIndex - ${capturedVoice.last().index}" }
 
                         val mergedAudioArray = ByteArray(capturedVoice.sumOf { it.data.size })
                         var offset = 0
@@ -396,7 +396,7 @@ class SharedAudioCapture(private val project: Project) {
 
                         if (!readyForMicrophoneAudio && audioDetection.framesBeforeVoiceDetected.size == PRE_SPEECH_BUFFER_SIZE) {
                             readyForMicrophoneAudio = true
-                            log.info("Ready for microphone audio")
+                            log.info { "Ready for microphone audio" }
                         }
                     }
                 }
@@ -406,22 +406,22 @@ class SharedAudioCapture(private val project: Project) {
                 captureJob.join()
                 processJob.cancelAndJoin()
             }
-            log.info("Stopping shared audio capture")
+            log.info { "Stopping shared audio capture" }
         } catch (e: InterruptedException) {
-            log.warn("Audio capture interrupted: ${e.message}")
+            log.warn { "Audio capture interrupted: ${e.message}" }
         } catch (e: LineUnavailableException) {
-            log.warn("Line unavailable: ${e.message}")
+            log.warn { "Line unavailable: ${e.message}" }
         } catch (e: Exception) {
             if (e.message?.startsWith("Line unsupported") == true) {
-                log.warn(e.message)
+                log.warn { e.message }
             } else {
-                log.error("Error while capturing audio: ${e.message}", e)
+                log.error(e) { "Error while capturing audio: ${e.message}" }
             }
         }
     }
 
     fun restart() {
-        log.debug("Restarting audio capture")
+        log.debug { "Restarting audio capture" }
         cancel()
         startCapture()
     }
@@ -452,25 +452,25 @@ class SharedAudioCapture(private val project: Project) {
 
     fun pause() {
         if (paused) return
-        log.trace("Pausing audio capture")
+        log.trace { "Pausing audio capture" }
         this.paused = true
     }
 
     fun resume() {
         if (!paused) return
-        log.trace("Resuming audio capture")
+        log.trace { "Resuming audio capture" }
         this.paused = false
     }
 
     fun cancel() {
-        log.debug("Cancelling audio capture")
+        log.debug { "Cancelling audio capture" }
         this.active = false
         line?.close()
         line = null
         thread?.interrupt()
         thread?.join()
         thread = null
-        log.debug("Audio capture cancelled")
+        log.debug { "Audio capture cancelled" }
     }
 
     fun isPaused(): Boolean {

@@ -67,7 +67,7 @@ kotlin {
                 compileOnly("com.jetbrains.intellij.platform:diff-impl:242.23726.103") {
                     isTransitive = false
                 }
-                compileOnly("com.jetbrains.intellij.platform:editor:242.23726.103") {
+                compileOnly("com.jetbrains.intellij.platform:editor:243.21565.199") {
                     isTransitive = false
                 }
                 compileOnly("com.jetbrains.intellij.platform:extensions:242.23726.103") {

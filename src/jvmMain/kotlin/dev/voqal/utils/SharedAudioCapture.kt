@@ -5,7 +5,7 @@ import com.intellij.openapi.project.Project
 import dev.voqal.assistant.focus.SpokenTranscript
 import dev.voqal.config.settings.VoiceDetectionSettings.VoiceDetectionProvider
 import dev.voqal.provider.AiProvider
-import dev.voqal.provider.StmProvider
+import dev.voqal.provider.VadProvider
 import dev.voqal.services.*
 import dev.voqal.status.VoqalStatus
 import dev.voqal.utils.SharedAudioCapture.AudioDetection.Companion.PRE_SPEECH_BUFFER_SIZE
@@ -279,8 +279,8 @@ class SharedAudioCapture(private val project: Project) {
                         val updateListener = (testMode && listener.isTestListener()) ||
                                 (!testMode && !listener.isTestListener())
                         if (updateListener) {
-                            if (listener !== modeProvider && listener is StmProvider) {
-                                continue //ignore audio, another provider is handling
+                            if (listener !is VadProvider && listener !== modeProvider) {
+                                continue //ignore audio, mode provider is handling
                             }
 
                             if (listener.sampleRate() == 24000f) {

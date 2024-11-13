@@ -55,7 +55,7 @@ kotlin {
                 compileOnly("io.github.funnysaltyfish:partial-json-parser:1.0.2")
                 compileOnly("io.github.oshai:kotlin-logging:7.0.0")
 
-                compileOnly("com.jetbrains.intellij.platform:code-style:242.23726.103") {
+                compileOnly("com.jetbrains.intellij.platform:code-style:243.21565.199") {
                     isTransitive = false
                 }
                 compileOnly("com.jetbrains.intellij.platform:core:242.23726.103") {

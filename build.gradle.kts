@@ -58,7 +58,7 @@ kotlin {
                 compileOnly("com.jetbrains.intellij.platform:code-style:242.23726.103") {
                     isTransitive = false
                 }
-                compileOnly("com.jetbrains.intellij.platform:core:242.23726.103") {
+                compileOnly("com.jetbrains.intellij.platform:core:243.21565.199") {
                     isTransitive = false
                 }
                 compileOnly("com.jetbrains.intellij.platform:diff:242.23726.103") {

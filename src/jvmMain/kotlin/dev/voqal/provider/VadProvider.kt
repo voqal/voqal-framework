@@ -73,7 +73,7 @@ abstract class VadProvider(project: Project) : AiProvider, SharedAudioCapture.Au
             if (!isSpeechDetected) {
                 isSpeechDetected = true
                 speechId = UUID.randomUUID().toString()
-                log.info("Using speech id: $speechId")
+                log.debug { "Using speech id: $speechId" }
 
                 if (begunTalkingTimeMillis == 0L) {
                     begunTalkingTimeMillis = voiceLastDetectedAt

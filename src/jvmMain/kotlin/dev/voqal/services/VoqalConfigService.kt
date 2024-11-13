@@ -84,11 +84,11 @@ val Project.audioCapture: SharedAudioCapture
     get() = getService(VoqalConfigService::class.java).getSharedAudioCapture()
 
 fun KLogger.warnChat(s: String, e: Throwable? = null) {
-    warn(s, e)
+    if (e == null) warn(s) else warn(s, e)
 }
 
 fun KLogger.errorChat(s: String, e: Throwable? = null) {
-    error(s, e)
+    if (e == null) error(s) else error(s, e)
 }
 
 inline fun <reified T> ComponentManager.service(): T {

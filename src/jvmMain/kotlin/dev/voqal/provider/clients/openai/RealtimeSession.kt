@@ -23,16 +23,12 @@ import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import io.vertx.kotlin.coroutines.coAwait
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
-import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.FlowCollector
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.encodeToJsonElement
 import java.io.InterruptedIOException
-import java.io.PipedInputStream
-import java.io.PipedOutputStream
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
 
@@ -55,15 +51,26 @@ class RealtimeSession(
         install(WebSockets)
     }
     private val activeSession = JsonObject()
-    private val readResponses = mutableSetOf<String>()
-    private var playingResponseId: String? = null
-    private var pis: PipedInputStream? = null
-    private var pos: PipedOutputStream? = null
     private var disposed: Boolean = false
     private val responseQueue = LinkedBlockingQueue<Promise<Any>>()
     private val deltaQueue = LinkedBlockingQueue<Promise<FlowCollector<String>>>()
     private val deltaMap = mutableMapOf<String, Any>()
+    private val realtimeAudioMap = mutableMapOf<String, RealtimeAudio>()
+    private val realtimeToolMap = mutableMapOf<String, RealtimeTool>()
     private var serverVad = false
+    private val ignoreTranscripts = setOf(
+        "Eh-hem!",
+        "Ahem.",
+        "Hmm",
+        "Uh-huh.",
+        "Mm-hmm",
+        "ahem",
+        "Mm-hm."
+    )
+    private var previousConvoId: String? = null
+    private val responseIdToConvoId = mutableMapOf<String, String>()
+    private val ignoreResponseToConvoIds = mutableSetOf<String>()
+    private val ignoreResponseIds = mutableSetOf<String>()
 
     init {
         val config = project.service<VoqalConfigService>().getConfig()
@@ -212,10 +219,6 @@ class RealtimeSession(
     private fun readLoop(): Runnable {
         return Runnable {
             try {
-                val channel = Channel<Job>(capacity = Channel.UNLIMITED).apply {
-                    project.scope.launch { consumeEach { it.join() } }
-                }
-
                 while (!disposed) {
                     val frame = runBlocking { session.incoming.receive() }
                     when (frame) {
@@ -226,6 +229,19 @@ class RealtimeSession(
                                     log.warn { "Realtime error: $json" }
                                 } else {
                                     log.trace { "Realtime event: $json" }
+                                }
+                            }
+
+                            if (json.getString("type") == "conversation.item.created") {
+                                previousConvoId = json.getJsonObject("item").getString("id")!!
+                            } else if (json.getString("type") == "response.created") {
+                                val responseId = json.getJsonObject("response").getString("id")!!
+                                responseIdToConvoId[responseId] = previousConvoId!!
+
+                                if (ignoreResponseToConvoIds.contains(previousConvoId!!)) {
+                                    log.info { "Ignoring response $responseId to convo $previousConvoId" }
+                                    ignoreResponseIds.add(responseId)
+                                    //ignoreResponseToConvoIds.remove(previousConvoId!!)
                                 }
                             }
 
@@ -248,87 +264,36 @@ class RealtimeSession(
 //                                    deltaMap[respId] = promise
 //                                }
                             } else if (json.getString("type") == "response.function_call_arguments.done") {
-                                val tool = json.getString("name")
-                                val args = json.getString("arguments")
-                                log.info("Tool call: $tool - Args: $args")
-
-                                val toolService = project.service<VoqalToolService>()
-                                val voqalTool = toolService.getAvailableTools()[tool]!!
-                                val callId = json.getString("call_id")
-                                toolService.executeTool(args, voqalTool) {
-                                    val chatContentManager = project.service<ChatToolWindowContentManager>()
-                                    chatContentManager.addAssistantToolResponse(voqalTool, callId, args, it)
-
-                                    session.send(Frame.Text(JsonObject().apply {
-                                        put("type", "conversation.item.create")
-                                        put("item", JsonObject().apply {
-                                            put("type", "function_call_output")
-                                            put("call_id", callId)
-                                            put("output", it.toString())
-                                        })
-                                    }.toString()))
-                                    session.send(Frame.Text(JsonObject().apply {
-                                        put("type", "response.create")
-                                    }.toString()))
+                                val responseId = json.getString("response_id")
+                                if (ignoreResponseIds.contains(responseId)) {
+                                    log.info("Ignoring response $responseId")
+                                    continue
                                 }
-
-                                if (!voqalTool.manualConfirm) {
-                                    project.scope.launch {
-                                        session.send(Frame.Text(JsonObject().apply {
-                                            put("type", "conversation.item.create")
-                                            put("item", JsonObject().apply {
-                                                put("type", "function_call_output")
-                                                put("call_id", callId)
-                                                put("output", "success")
-                                            })
-                                        }.toString()))
-
-                                        //todo: dynamic trigger?
-                                        if (tool == "input_form") {
-                                            session.send(Frame.Text(JsonObject().apply {
-                                                put("type", "response.create")
-                                            }.toString()))
-                                        }
-                                    }
+                                val convoId = responseIdToConvoId[responseId]!!
+                                val realtimeTool = realtimeToolMap.getOrPut(convoId) {
+                                    RealtimeTool(project, session)
                                 }
+                                realtimeTool.executeTool(json)
                             } else if (json.getString("type") == "response.audio.delta") {
-                                channel.trySend(project.scope.launch(start = CoroutineStart.LAZY) {
-                                    if (pis == null) {
-                                        val responseId = json.getString("response_id")
-                                        if (readResponses.contains(responseId)) {
-                                            return@launch
-                                        } else {
-                                            log.debug { "Playing audio response: $responseId" }
-                                            readResponses.add(responseId)
-                                            playingResponseId = responseId
-                                        }
-                                        pis = PipedInputStream()
-                                        pos = PipedOutputStream()
-                                        pos!!.connect(pis!!)
-
-                                        project.scope.launch {
-                                            project.service<VoqalVoiceService>().playStreamingWavFile(pis!!)
-                                            pis = null
-                                            pos = null
-                                            playingResponseId = null
-                                        }
-                                    }
-                                    if (json.getString("response_id") == playingResponseId) {
-                                        try {
-                                            pos?.write(Base64.getDecoder().decode(json.getString("delta")))
-                                        } catch (ignore: Throwable) {
-                                        }
-                                    }
-                                })
-                            } else if (json.getString("type") == "response.audio.done") {
-                                if (json.getString("response_id") == playingResponseId) {
-                                    channel.trySend(project.scope.launch(start = CoroutineStart.LAZY) {
-                                        try {
-                                            pos?.write(SharedAudioCapture.EMPTY_BUFFER)
-                                        } catch (ignore: Throwable) {
-                                        }
-                                    })
+                                val responseId = json.getString("response_id")
+                                if (ignoreResponseIds.contains(responseId)) {
+                                    log.info("Ignoring response $responseId")
+                                    continue
                                 }
+                                val convoId = responseIdToConvoId[responseId]!!
+                                val realtimeAudio = realtimeAudioMap.getOrPut(convoId) {
+                                    RealtimeAudio(project, responseId)
+                                }
+                                realtimeAudio.addAudioData(json)
+                            } else if (json.getString("type") == "response.audio.done") {
+                                val responseId = json.getString("response_id")
+                                if (ignoreResponseIds.contains(responseId)) {
+                                    log.info("Ignoring response $responseId")
+                                    continue
+                                }
+                                val convoId = responseIdToConvoId[responseId]!!
+                                val realtimeAudio = realtimeAudioMap[convoId]!!
+                                realtimeAudio.finishAudio()
                             } else if (json.getString("type") == "input_audio_buffer.speech_started") {
                                 log.info("Realtime speech started")
                                 stopCurrentVoice()
@@ -339,9 +304,31 @@ class RealtimeSession(
                                 if (transcript.endsWith("\n")) {
                                     transcript = transcript.substring(0, transcript.length - 1)
                                 }
+
+                                val itemId = json.getString("item_id")
+                                if (transcript.isEmpty()) {
+                                    log.info("Ignoring empty transcript")
+                                    ignoreResponseToConvoIds.add(itemId)
+                                    continue
+                                } else if (transcript in ignoreTranscripts) {
+                                    log.info("Ignoring transcript: $transcript")
+                                    ignoreResponseToConvoIds.add(itemId)
+                                    continue
+                                }
+
                                 log.info("User transcript: $transcript")
                                 val chatContentManager = project.service<ChatToolWindowContentManager>()
                                 chatContentManager.addUserMessage(transcript)
+
+                                val realtimeAudio = realtimeAudioMap.getOrPut(itemId) {
+                                    RealtimeAudio(project, itemId)
+                                }
+                                realtimeAudio.startAudio()
+
+                                val realtimeTool = realtimeToolMap.getOrPut(itemId) {
+                                    RealtimeTool(project, session)
+                                }
+                                realtimeTool.allowExecution()
                             } else if (json.getString("type") == "response.audio_transcript.done") {
                                 val transcript = json.getString("transcript")
                                 log.info("Assistant transcript: $transcript")
@@ -387,12 +374,7 @@ class RealtimeSession(
     }
 
     private fun stopCurrentVoice() {
-        playingResponseId = null
-        try {
-            pos?.close()
-            pis?.close()
-        } catch (ignore: Throwable) {
-        }
+        realtimeAudioMap.values.forEach { it.stopAudio() }
     }
 
     private fun writeLoop(): Runnable {
@@ -440,15 +422,16 @@ class RealtimeSession(
         }
 
         if (detection.speechDetected.get()) {
-            if (playingResponseId != null) {
-                log.warn("Sending response cancel")
-                stopCurrentVoice()
-                runBlocking {
-                    session.send(Frame.Text(JsonObject().apply {
-                        put("type", "response.cancel")
-                    }.toString()))
-                }
-            }
+            println("todo")
+//            if (playingResponseId != null) {
+//                log.warn("Sending response cancel")
+//                stopCurrentVoice()
+//                runBlocking {
+//                    session.send(Frame.Text(JsonObject().apply {
+//                        put("type", "response.cancel")
+//                    }.toString()))
+//                }
+//            }
 
             capturing = true
             detection.framesBeforeVoiceDetected.forEach {

@@ -17,7 +17,7 @@ import java.io.PipedOutputStream
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
 
-class RealtimeAudio(private val project: Project, val convoId: String) {
+class RealtimeAudio(private val project: Project, convoId: String) {
 
     private val log = project.getVoqalLogger(this::class)
     private val audioPlaying = AtomicBoolean(false)

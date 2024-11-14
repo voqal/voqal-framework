@@ -232,7 +232,7 @@ class RealtimeSession(
                                 }
                             }
 
-                            if (json.getString("type") == "conversation.item.created") {
+                            if (previousConvoId == null && json.getString("type") == "conversation.item.created") {
                                 previousConvoId = json.getJsonObject("item").getString("id")!!
                             } else if (json.getString("type") == "response.created") {
                                 val responseId = json.getJsonObject("response").getString("id")!!
@@ -282,7 +282,7 @@ class RealtimeSession(
                                 }
                                 val convoId = responseIdToConvoId[responseId]!!
                                 val realtimeAudio = realtimeAudioMap.getOrPut(convoId) {
-                                    RealtimeAudio(project, responseId)
+                                    RealtimeAudio(project, convoId)
                                 }
                                 realtimeAudio.addAudioData(json)
                             } else if (json.getString("type") == "response.audio.done") {
@@ -294,6 +294,7 @@ class RealtimeSession(
                                 val convoId = responseIdToConvoId[responseId]!!
                                 val realtimeAudio = realtimeAudioMap[convoId]!!
                                 realtimeAudio.finishAudio()
+                                previousConvoId = null
                             } else if (json.getString("type") == "input_audio_buffer.speech_started") {
                                 log.info("Realtime speech started")
                                 stopCurrentVoice()
@@ -305,14 +306,14 @@ class RealtimeSession(
                                     transcript = transcript.substring(0, transcript.length - 1)
                                 }
 
-                                val itemId = json.getString("item_id")
+                                val convoId = json.getString("item_id")
                                 if (transcript.isEmpty()) {
                                     log.info("Ignoring empty transcript")
-                                    ignoreResponseToConvoIds.add(itemId)
+                                    ignoreResponseToConvoIds.add(convoId)
                                     continue
                                 } else if (transcript in ignoreTranscripts) {
                                     log.info("Ignoring transcript: $transcript")
-                                    ignoreResponseToConvoIds.add(itemId)
+                                    ignoreResponseToConvoIds.add(convoId)
                                     continue
                                 }
 
@@ -320,12 +321,12 @@ class RealtimeSession(
                                 val chatContentManager = project.service<ChatToolWindowContentManager>()
                                 chatContentManager.addUserMessage(transcript)
 
-                                val realtimeAudio = realtimeAudioMap.getOrPut(itemId) {
-                                    RealtimeAudio(project, itemId)
+                                val realtimeAudio = realtimeAudioMap.getOrPut(convoId) {
+                                    RealtimeAudio(project, convoId)
                                 }
                                 realtimeAudio.startAudio()
 
-                                val realtimeTool = realtimeToolMap.getOrPut(itemId) {
+                                val realtimeTool = realtimeToolMap.getOrPut(convoId) {
                                     RealtimeTool(project, session)
                                 }
                                 realtimeTool.allowExecution()

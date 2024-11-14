@@ -32,7 +32,7 @@ class RealtimeAudio(private val project: Project, convoId: String) {
     }
 
     init {
-        log.info("Initializing RealtimeAudio. Convo id: $convoId")
+        log.debug("Initializing RealtimeAudio. Convo id: $convoId")
         pos.connect(pis)
     }
 

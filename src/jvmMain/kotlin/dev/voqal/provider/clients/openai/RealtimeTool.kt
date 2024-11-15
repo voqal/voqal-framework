@@ -16,8 +16,8 @@ class RealtimeTool(private val project: Project, private val session: DefaultWeb
     fun executeTool(json: JsonObject) {
         executableTool = { doExecution(json) }
         if (!executeAllowed.get()) {
-            log.warn("Tool execution is not allowed")
-            return
+//            log.warn("Tool execution is not allowed")
+//            return
         }
 
         executableTool!!.invoke()

@@ -17,6 +17,8 @@ import com.google.api.services.gmail.model.Draft
 import com.google.api.services.gmail.model.Label
 import com.google.api.services.gmail.model.Message
 import com.google.api.services.gmail.model.ModifyMessageRequest
+import io.vertx.core.json.JsonArray
+import io.vertx.core.json.JsonObject
 import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
@@ -30,7 +32,6 @@ class GmailConnection {
     companion object {
         private const val APPLICATION_NAME = "Gmail API Java Quickstart"
         private val JSON_FACTORY: JsonFactory = GsonFactory.getDefaultInstance()
-        private const val TOKENS_DIRECTORY_PATH = "tokens"
         private val SCOPES = listOf(GmailScopes.MAIL_GOOGLE_COM)
 
         @Throws(IOException::class)
@@ -42,7 +43,7 @@ class GmailConnection {
             val flow = GoogleAuthorizationCodeFlow.Builder(
                 HTTP_TRANSPORT, JSON_FACTORY, clientSecrets, SCOPES
             )
-                .setDataStoreFactory(FileDataStoreFactory(File(TOKENS_DIRECTORY_PATH)))
+                .setDataStoreFactory(FileDataStoreFactory(File("C:\\Users\\Brandon\\IdeaProjects\\workspace\\tokens")))
                 .setAccessType("offline")
                 .build()
             val receiver: LocalServerReceiver = LocalServerReceiver.Builder().setPort(8888).build()
@@ -172,15 +173,64 @@ class GmailConnection {
 
         @JvmStatic
         fun main(args: Array<String>) {
-            val HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport()
-            val service = Gmail.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
-                .setApplicationName(APPLICATION_NAME)
-                .build()
-
-            val user = "me"
-            labelUnreadMessages(service, user)
-            printEmailContents(service, user)
-            helloWorldDraft(service, user)
+//            val user = "me"
+//            labelUnreadMessages(service, user)
+//            printEmailContents(service, user)
+//            helloWorldDraft(service, user)
         }
+    }
+
+    val HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport()
+    val service = Gmail.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
+        .setApplicationName(APPLICATION_NAME)
+        .build()
+
+    fun getUnreadEmails(): JsonArray {
+        val query = "is:unread in:inbox"
+        val messagesResponse = service.users().messages().list("me").setQ(query).execute()
+        val messages = messagesResponse.messages
+
+        if (messages.isNullOrEmpty()) {
+            println("No unread messages found.")
+            return JsonArray()
+        }
+
+        val unreadEmails = JsonArray()
+        for (message in messages) {
+            val fullMessage = service.users().messages().get("me", message.id).setFormat("full").execute()
+            val fullMessageJson = fullMessage.toPrettyString()
+            val fullJson = JsonObject(fullMessageJson)
+            val body = fullMessage.payload.parts?.firstOrNull { it.mimeType == "text/plain" }?.body?.data?.let {
+                String(Base64.decodeBase64(it))
+            } ?: "No Body"
+            fullJson.put("body", body)
+
+            //replace headers with a map
+            val headers = fullMessage.payload.headers.associate { it.name to it.value }
+            fullJson.put("headers", JsonObject(headers))
+
+            unreadEmails.add(fullJson)
+        }
+        return unreadEmails
+    }
+
+    fun addLabel(messageId: String, labelName: String) {
+        val labelsResponse = service.users().labels().list("me").execute()
+        val existingLabel = labelsResponse.labels.firstOrNull { it.name == labelName }
+        val labelId = existingLabel?.id ?: run {
+            val newLabel = Label().apply {
+                name = labelName
+                labelListVisibility = "labelShow"
+                messageListVisibility = "show"
+            }
+            val createdLabel = service.users().labels().create("me", newLabel).execute()
+            createdLabel.id
+        }
+
+        val modifyRequest = ModifyMessageRequest().apply {
+            addLabelIds = listOf(labelId)
+        }
+        service.users().messages().modify("me", messageId, modifyRequest).execute()
+        println("Labeled message ID: $messageId with '$labelName'.")
     }
 }

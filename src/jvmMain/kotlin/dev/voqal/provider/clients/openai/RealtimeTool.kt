@@ -11,10 +11,17 @@ class RealtimeTool(private val project: Project, private val session: DefaultWeb
 
     private val log = project.getVoqalLogger(this::class)
     private val executeAllowed = AtomicBoolean(false)
+    private val toolExecuted = AtomicBoolean(false)
     private var executableTool: (() -> Unit)? = null
 
     fun executeTool(json: JsonObject) {
-        executableTool = { doExecution(json) }
+        executableTool = {
+            if (toolExecuted.compareAndSet(false, true)) {
+                doExecution(json)
+            } else {
+                log.warn("Tool already executed")
+            }
+        }
         if (!executeAllowed.get()) {
 //            log.warn("Tool execution is not allowed")
 //            return

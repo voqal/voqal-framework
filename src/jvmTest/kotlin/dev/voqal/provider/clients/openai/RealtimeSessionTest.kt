@@ -132,6 +132,7 @@ class RealtimeSessionTest : VoqalTest {
         assertEquals("item_AU0Bm4zcud6sRKZ5hhajp", responseIdToConvoId["resp_AU0Bpc05T4L2oW0dxHepe"])
         assertEquals("item_AU0Bm4zcud6sRKZ5hhajp", responseIdToConvoId["resp_AU0BqyVw3pEv3mvN6DlMo"])
 
+        session.dispose()
         socketSession!!.close()
         server.stop()
     }

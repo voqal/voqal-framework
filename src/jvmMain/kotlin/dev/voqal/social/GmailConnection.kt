@@ -13,11 +13,18 @@ import com.google.api.client.util.Base64
 import com.google.api.client.util.store.FileDataStoreFactory
 import com.google.api.services.gmail.Gmail
 import com.google.api.services.gmail.GmailScopes
+import com.google.api.services.gmail.model.Draft
 import com.google.api.services.gmail.model.Label
+import com.google.api.services.gmail.model.Message
 import com.google.api.services.gmail.model.ModifyMessageRequest
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.io.IOException
 import java.io.InputStreamReader
+import java.util.*
+import javax.mail.Session
+import javax.mail.internet.InternetAddress
+import javax.mail.internet.MimeMessage
 
 class GmailConnection {
     companion object {
@@ -28,7 +35,8 @@ class GmailConnection {
 
         @Throws(IOException::class)
         private fun getCredentials(HTTP_TRANSPORT: NetHttpTransport): Credential {
-            val `in` = File("C:\\Users\\Brandon\\Desktop\\client_secret_1079188804909-7vnpqsbbb6irgikr7kj0k243t2vs2nhk.apps.googleusercontent.com.json").inputStream()
+            val `in` =
+                File("C:\\Users\\Brandon\\Desktop\\client_secret_1079188804909-7vnpqsbbb6irgikr7kj0k243t2vs2nhk.apps.googleusercontent.com.json").inputStream()
             val clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, InputStreamReader(`in`))
 
             val flow = GoogleAuthorizationCodeFlow.Builder(
@@ -104,6 +112,64 @@ class GmailConnection {
             }
         }
 
+        private fun helloWorldDraft(service: Gmail, user: String) {
+            val query = "is:unread in:inbox"
+            val messagesResponse = service.users().messages().list(user).setQ(query).execute()
+            val messages = messagesResponse.messages
+
+            if (messages.isNullOrEmpty()) {
+                println("No unread messages found.")
+                return
+            }
+
+            println("Creating drafts as responses for unread emails...")
+            for (message in messages) {
+                val fullMessage = service.users().messages().get(user, message.id).execute()
+                val threadId = fullMessage.threadId
+                val to = fullMessage.payload.headers.firstOrNull { it.name == "From" }?.value ?: "unknown@example.com"
+                val subject = fullMessage.payload.headers.firstOrNull { it.name == "Subject" }?.value ?: "No Subject"
+
+                // Create the email content as a reply
+                val email = createReplyEmail(to, "me", subject, "Hello world!", message.id)
+                val draft = Draft().apply {
+                    this.message = Message().apply {
+                        raw = encodeEmail(email)
+                        this.threadId = threadId // Attach to the thread
+                    }
+                }
+
+                // Add draft to Gmail
+                service.users().drafts().create(user, draft).execute()
+                println("Draft created as a response for thread ID: $threadId")
+            }
+        }
+
+        private fun createReplyEmail(
+            to: String,
+            from: String,
+            subject: String,
+            bodyText: String,
+            originalMessageId: String
+        ): MimeMessage {
+            val session = Session.getDefaultInstance(Properties(), null)
+            val email = MimeMessage(session)
+            email.setFrom(InternetAddress(from))
+            email.addRecipient(javax.mail.Message.RecipientType.TO, InternetAddress(to))
+            email.subject = "Re: $subject"
+            email.setText(bodyText)
+
+            // Add headers for reply
+            email.setHeader("In-Reply-To", originalMessageId)
+            email.setHeader("References", originalMessageId)
+            return email
+        }
+
+        private fun encodeEmail(email: MimeMessage): String {
+            val buffer = ByteArrayOutputStream()
+            email.writeTo(buffer)
+            return Base64.encodeBase64URLSafeString(buffer.toByteArray())
+        }
+
         @JvmStatic
         fun main(args: Array<String>) {
             val HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport()
@@ -112,32 +178,9 @@ class GmailConnection {
                 .build()
 
             val user = "me"
-
-            val listResponse = service.users().labels().list(user).execute()
-            val labels = listResponse.labels
-            if (labels.isEmpty()) {
-                println("No labels found.")
-            } else {
-                println("Labels:")
-                for (label in labels) {
-                    println("- ${label.name}")
-                }
-            }
-
-            if (labels.none { it.name == "Test2" }) {
-                val label = Label().apply {
-                    name = "Test2"
-                    labelListVisibility = "labelShow"
-                    messageListVisibility = "show"
-                }
-                service.users().labels().create(user, label).execute()
-                println("Label 'Test2' created.")
-            } else {
-                println("Label 'Test2' already exists.")
-            }
-
             labelUnreadMessages(service, user)
             printEmailContents(service, user)
+            helloWorldDraft(service, user)
         }
     }
 }

@@ -7,12 +7,16 @@ import io.vertx.core.json.JsonObject
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
 
-class RealtimeTool(private val project: Project, private val session: DefaultWebSocketSession) {
+class RealtimeTool(
+    private val project: Project,
+    private val session: DefaultWebSocketSession
+) {
 
     private val log = project.getVoqalLogger(this::class)
     private val executeAllowed = AtomicBoolean(false)
     private val toolExecuted = AtomicBoolean(false)
     private var executableTool: (() -> Unit)? = null
+    private var toolArgs = ""
 
     fun executeTool(json: JsonObject) {
         executableTool = {
@@ -27,6 +31,7 @@ class RealtimeTool(private val project: Project, private val session: DefaultWeb
 //            return
         }
 
+        toolArgs = json.toString()
         executableTool!!.invoke()
     }
 

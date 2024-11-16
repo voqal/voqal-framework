@@ -84,5 +84,72 @@ kotlin {
                 }
             }
         }
+        val jvmTest by getting {
+            dependencies {
+                implementation("org.slf4j:slf4j-simple:2.0.16")
+                implementation("io.vertx:vertx-junit5:4.5.11")
+                implementation("org.jooq:joor:0.9.15")
+
+                implementation("org.junit.jupiter:junit-jupiter-api:5.11.3")
+                runtimeOnly("org.junit.jupiter:junit-jupiter-engine:5.11.3")
+                implementation(libs.mockito.kotlin)
+                implementation("io.ktor:ktor-server-websockets:2.3.12")
+                implementation("io.ktor:ktor-server-netty:2.3.12")
+
+                implementation("io.ktor:ktor-client-java:2.3.12")
+                implementation(libs.ktor.client.content.negotiation)
+                implementation(libs.ktor.client.java.jvm)
+                implementation(libs.ktor.serialization.kotlinx.json)
+
+                implementation(libs.openai.client)
+                implementation(libs.vertx.core)
+                implementation(libs.vertx.lang.kotlin.coroutines)
+                implementation(libs.ktor.client.content.negotiation)
+                implementation(libs.ktor.serialization.kotlinx.json)
+                implementation(libs.pebble)
+                implementation(libs.libfvad.jni)
+                implementation(libs.vertexai)
+                implementation(libs.commons.lang3)
+                implementation(libs.commons.io)
+                implementation(libs.jna)
+                implementation(libs.snakeyaml)
+                implementation("io.github.funnysaltyfish:partial-json-parser:1.0.2")
+                implementation("io.github.oshai:kotlin-logging:7.0.0")
+                implementation("com.jetbrains.intellij.platform:diagnostic:242.23726.103") {
+                    isTransitive = false
+                }
+                implementation("com.jetbrains.intellij.platform:code-style:242.23726.103") {
+                    isTransitive = false
+                }
+                implementation("com.jetbrains.intellij.platform:core:242.23726.103") {
+                    isTransitive = false
+                }
+                implementation("com.jetbrains.intellij.platform:diff:242.23726.103") {
+                    isTransitive = false
+                }
+                implementation("com.jetbrains.intellij.platform:diff-impl:242.23726.103") {
+                    isTransitive = false
+                }
+                implementation("com.jetbrains.intellij.platform:editor:242.23726.103") {
+                    isTransitive = false
+                }
+                implementation("com.jetbrains.intellij.platform:extensions:242.23726.103") {
+                    isTransitive = false
+                }
+                implementation("com.jetbrains.intellij.platform:util:242.23726.103") {
+                    isTransitive = false
+                }
+                implementation("com.jetbrains.intellij.platform:util-base:242.23726.103") {
+                    isTransitive = false
+                }
+                implementation("com.jetbrains.intellij.platform:util-diff:242.23726.103") {
+                    isTransitive = false
+                }
+            }
+        }
     }
+}
+
+tasks.withType<Test> {
+    useJUnitPlatform()
 }

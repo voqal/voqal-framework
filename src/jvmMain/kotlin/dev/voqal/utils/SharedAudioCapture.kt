@@ -262,7 +262,7 @@ class SharedAudioCapture(private val project: Project) {
                     modeProviders[it.promptName] = provider
                 }
             }
-            currentMode = configService.getCurrentPromptMode()
+            currentMode = configService.getActivePromptName()
 
             val processJob = CoroutineScope(Dispatchers.Default).launch {
                 while (active) {

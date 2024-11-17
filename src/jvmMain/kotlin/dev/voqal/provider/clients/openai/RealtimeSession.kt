@@ -148,7 +148,7 @@ class RealtimeSession(
     private fun updateSession() {
         val configService = project.service<VoqalConfigService>()
         val toolService = project.service<VoqalToolService>()
-        val promptName = configService.getCurrentPromptMode()
+        val promptName = configService.getActivePromptName()
         var nopDirective = project.service<VoqalDirectiveService>().createDirective(
             transcription = SpokenTranscript("n/a", null),
             promptName = promptName,

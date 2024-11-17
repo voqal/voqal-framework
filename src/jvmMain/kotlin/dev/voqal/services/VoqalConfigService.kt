@@ -70,7 +70,7 @@ interface VoqalConfigService {
 
     fun getPromptTemplate(promptName: String): String
 
-    fun getCurrentPromptMode(): String
+    fun getActivePromptName(): String
 }
 
 val Project.scope: CoroutineScope

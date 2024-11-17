@@ -276,7 +276,7 @@ class RealtimeSession(
                                 }
                                 val convoId = responseIdToConvoId[responseId]!!
                                 val realtimeTool = realtimeToolMap.getOrPut(convoId) {
-                                    RealtimeTool(project, session)
+                                    RealtimeTool(project, session, convoId)
                                 }
                                 realtimeTool.executeTool(json)
                             } else if (json.getString("type") == "response.audio.delta") {
@@ -332,7 +332,7 @@ class RealtimeSession(
                                 realtimeAudio.startAudio()
 
                                 val realtimeTool = realtimeToolMap.getOrPut(convoId) {
-                                    RealtimeTool(project, session)
+                                    RealtimeTool(project, session, convoId)
                                 }
                                 realtimeTool.allowExecution()
                             } else if (json.getString("type") == "response.audio_transcript.done") {

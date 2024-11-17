@@ -91,7 +91,7 @@ class MockConfigService(
         TODO("Not yet implemented")
     }
 
-    override fun getCurrentPromptMode(): String {
+    override fun getActivePromptName(): String {
         return "default"
     }
 }

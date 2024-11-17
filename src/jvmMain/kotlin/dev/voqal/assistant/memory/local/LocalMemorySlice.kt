@@ -294,7 +294,7 @@ class LocalMemorySlice(
             messageList.add(completion.choices.first().message)
             val toolCalled = completion.choices.first().message.toolCalls?.firstOrNull() as ToolCall.Function?
             if (toolCalled != null) {
-                val voqalTool = project.service<VoqalToolService>().getAvailableTools()[toolCalled.function.name]
+                val voqalTool = directive.service<VoqalToolService>().getAvailableTools()[toolCalled.function.name]
                 if (voqalTool?.manualConfirm != true) {
                     log.debug { "Auto-confirming tool call: ${toolCalled.function.name}" }
                     messageList.add(

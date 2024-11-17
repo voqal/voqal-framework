@@ -69,9 +69,18 @@ data class VoqalDirective(
         )
         val fullPrompt = writer.toString()
 
+        //remove front matter
+        var cleanPrompt = fullPrompt
+        if (fullPrompt.startsWith("---")) {
+            val endOfFrontMatter = fullPrompt.indexOf("\n---\n")
+            if (endOfFrontMatter != -1) {
+                cleanPrompt = fullPrompt.substring(endOfFrontMatter + 5)
+            }
+        }
+
         //merge empty new lines into single new line (ignoring code blocks)
         val finalPrompt = StringWriter()
-        val fullPromptLines = fullPrompt.lines()
+        val fullPromptLines = cleanPrompt.lines()
         var inCodeBlock = false
         var previousLineBlank = false
         fullPromptLines.forEachIndexed { index, line ->

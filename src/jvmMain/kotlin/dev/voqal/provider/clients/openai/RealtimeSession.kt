@@ -147,8 +147,13 @@ class RealtimeSession(
 
     private fun updateSession() {
         val configService = project.service<VoqalConfigService>()
-        val toolService = project.service<VoqalToolService>()
         val promptName = configService.getActivePromptName()
+        if (configService.getConfig().promptLibrarySettings.prompts.none { it.promptName == promptName }) {
+            log.warn("Prompt $promptName not found in prompt library")
+            return
+        }
+
+        val toolService = project.service<VoqalToolService>()
         var nopDirective = project.service<VoqalDirectiveService>().createDirective(
             transcription = SpokenTranscript("n/a", null),
             promptName = promptName,

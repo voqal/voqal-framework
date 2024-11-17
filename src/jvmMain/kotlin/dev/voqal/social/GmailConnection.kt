@@ -233,4 +233,51 @@ class GmailConnection {
         service.users().messages().modify("me", messageId, modifyRequest).execute()
         println("Labeled message ID: $messageId with '$labelName'.")
     }
+
+    fun makeDraft(messageId: String, text: String) {
+        val user = "me"
+        val fullMessage = service.users().messages().get(user, messageId).execute()
+        val threadId = fullMessage.threadId
+        val to = fullMessage.payload.headers.firstOrNull { it.name == "From" }?.value ?: "unknown@example.com"
+        val subject = fullMessage.payload.headers.firstOrNull { it.name == "Subject" }?.value ?: "No Subject"
+
+        // Create the email content as a reply
+        val email = createReplyEmail(to, "me", subject, text, messageId)
+        val draft = Draft().apply {
+            this.message = Message().apply {
+                raw = encodeEmail(email)
+                this.threadId = threadId // Attach to the thread
+            }
+        }
+
+        // Add draft to Gmail
+        service.users().drafts().create(user, draft).execute()
+        println("Draft created as a response for thread ID: $threadId")
+    }
+
+    private fun createReplyEmail(
+        to: String,
+        from: String,
+        subject: String,
+        bodyText: String,
+        originalMessageId: String
+    ): MimeMessage {
+        val session = Session.getDefaultInstance(Properties(), null)
+        val email = MimeMessage(session)
+        email.setFrom(InternetAddress(from))
+        email.addRecipient(javax.mail.Message.RecipientType.TO, InternetAddress(to))
+        email.subject = "Re: $subject"
+        email.setText(bodyText)
+
+        // Add headers for reply
+        email.setHeader("In-Reply-To", originalMessageId)
+        email.setHeader("References", originalMessageId)
+        return email
+    }
+
+    private fun encodeEmail(email: MimeMessage): String {
+        val buffer = ByteArrayOutputStream()
+        email.writeTo(buffer)
+        return Base64.encodeBase64URLSafeString(buffer.toByteArray())
+    }
 }

@@ -5,7 +5,6 @@ import io.vertx.core.json.JsonObject
 
 data class SocialConnectionSettings(
     val provider: SCProvider = SCProvider.GMAIL,
-    val accessToken: String = "",
     val refreshToken: String = "",
     val scope: String = ""
 ) : ConfigurableSettings {
@@ -15,7 +14,6 @@ data class SocialConnectionSettings(
      */
     constructor(json: JsonObject) : this(
         provider = SCProvider.lenientValueOf(json.getString("provider") ?: SCProvider.GMAIL.name),
-        accessToken = json.getString("accessToken") ?: "",
         refreshToken = json.getString("refreshToken") ?: "",
         scope = json.getString("scope") ?: ""
     )
@@ -23,7 +21,6 @@ data class SocialConnectionSettings(
     override fun toJson(): JsonObject {
         return JsonObject().apply {
             put("provider", provider.name)
-            put("accessToken", accessToken)
             put("refreshToken", refreshToken)
             put("scope", scope)
         }
@@ -31,7 +28,6 @@ data class SocialConnectionSettings(
 
     override fun withKeysRemoved(): SocialConnectionSettings {
         return copy(
-            accessToken = if (accessToken.isNotEmpty()) "***" else "",
             refreshToken = if (refreshToken.isNotEmpty()) "***" else ""
         )
     }

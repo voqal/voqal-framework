@@ -20,7 +20,7 @@ import javax.mail.Session
 import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeMessage
 
-class GmailConnection(private val accessToken: String) {
+class GmailConnection(var accessToken: String) {
 
     companion object {
         private val JSON_FACTORY: JsonFactory = GsonFactory.getDefaultInstance()
@@ -34,7 +34,7 @@ class GmailConnection(private val accessToken: String) {
     }
     private val service = Gmail.Builder(HTTP_TRANSPORT, JSON_FACTORY, requestInitializer).build()
 
-    fun getUnreadEmails(): JsonArray {
+    fun getUnreadEmails(): JsonArray {//todo: exclude emails with drafts
         val query = "is:unread in:inbox"
         val messagesResponse = service.users().messages().list("me").setQ(query).execute()
         val messages = messagesResponse.messages

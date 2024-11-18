@@ -92,16 +92,29 @@ class GmailConnection(private val accessToken: String) {
 
         // Create the email content as a reply
         val email = createReplyEmail(to, "me", subject, text, messageId)
-        val draft = Draft().apply {
+        val draftContent = Draft().apply {
             this.message = Message().apply {
                 raw = encodeEmail(email)
                 this.threadId = threadId // Attach to the thread
             }
         }
 
-        // Add draft to Gmail
-        service.users().drafts().create(user, draft).execute()
-        println("Draft created as a response for thread ID: $threadId")
+        // Check for existing drafts in the thread
+        val draftsList = service.users().drafts().list(user).execute().drafts
+        val existingDraft = draftsList?.find { draft ->
+            val draftMessage = service.users().drafts().get(user, draft.id).execute().message
+            draftMessage.threadId == threadId
+        }
+
+        if (existingDraft != null) {
+            // Update the existing draft
+            service.users().drafts().update(user, existingDraft.id, draftContent).execute()
+            println("Draft updated for thread ID: $threadId")
+        } else {
+            // Create a new draft if no existing draft is found
+            service.users().drafts().create(user, draftContent).execute()
+            println("Draft created as a response for thread ID: $threadId")
+        }
     }
 
     private fun createReplyEmail(

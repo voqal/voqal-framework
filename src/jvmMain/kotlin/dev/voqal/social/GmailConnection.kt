@@ -12,6 +12,8 @@ import com.google.api.services.gmail.model.Draft
 import com.google.api.services.gmail.model.Label
 import com.google.api.services.gmail.model.Message
 import com.google.api.services.gmail.model.ModifyMessageRequest
+import com.intellij.openapi.project.Project
+import dev.voqal.services.getVoqalLogger
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import java.io.ByteArrayOutputStream
@@ -20,7 +22,7 @@ import javax.mail.Session
 import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeMessage
 
-class GmailConnection(var accessToken: String) {
+class GmailConnection(project: Project, var accessToken: String) {
 
     companion object {
         private val JSON_FACTORY: JsonFactory = GsonFactory.getDefaultInstance()
@@ -33,6 +35,7 @@ class GmailConnection(var accessToken: String) {
         }
     }
     private val service = Gmail.Builder(HTTP_TRANSPORT, JSON_FACTORY, requestInitializer).build()
+    private val log = project.getVoqalLogger(this::class)
 
     fun getUnreadEmails(): JsonArray {//todo: exclude emails with drafts
         val query = "is:unread in:inbox"
@@ -40,7 +43,7 @@ class GmailConnection(var accessToken: String) {
         val messages = messagesResponse.messages
 
         if (messages.isNullOrEmpty()) {
-            println("No unread messages found.")
+            log.debug { "No unread messages found" }
             return JsonArray()
         }
 
@@ -80,7 +83,7 @@ class GmailConnection(var accessToken: String) {
             addLabelIds = listOf(labelId)
         }
         service.users().messages().modify("me", messageId, modifyRequest).execute()
-        println("Labeled message ID: $messageId with '$labelName'.")
+        log.debug { "Labeled message ID: $messageId with '$labelName'." }
     }
 
     fun makeDraft(messageId: String, text: String) {
@@ -109,11 +112,11 @@ class GmailConnection(var accessToken: String) {
         if (existingDraft != null) {
             // Update the existing draft
             service.users().drafts().update(user, existingDraft.id, draftContent).execute()
-            println("Draft updated for thread ID: $threadId")
+            log.debug { "Draft updated for thread ID: $threadId" }
         } else {
             // Create a new draft if no existing draft is found
             service.users().drafts().create(user, draftContent).execute()
-            println("Draft created as a response for thread ID: $threadId")
+            log.debug { "Draft created as a response for thread ID: $threadId" }
         }
     }
 

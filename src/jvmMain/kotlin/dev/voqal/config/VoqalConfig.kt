@@ -9,7 +9,8 @@ open class VoqalConfig(
     val speechToTextSettings: SpeechToTextSettings = SpeechToTextSettings(),
     val languageModelsSettings: LanguageModelsSettings = LanguageModelsSettings(),
     val textToSpeechSettings: TextToSpeechSettings = TextToSpeechSettings(),
-    val promptLibrarySettings: PromptLibrarySettings = PromptLibrarySettings()
+    val promptLibrarySettings: PromptLibrarySettings = PromptLibrarySettings(),
+    val socialSettings: SocialSettings = SocialSettings()
 ) : ConfigurableSettings {
 
     /**
@@ -33,7 +34,10 @@ open class VoqalConfig(
         } ?: TextToSpeechSettings(),
         promptLibrarySettings = json.getJsonObject("promptLibrarySettings")?.let {
             PromptLibrarySettings(it)
-        } ?: PromptLibrarySettings()
+        } ?: PromptLibrarySettings(),
+        socialSettings = json.getJsonObject("socialSettings")?.let {
+            SocialSettings(it)
+        } ?: SocialSettings()
     )
 
     override fun toJson(): JsonObject {
@@ -44,6 +48,7 @@ open class VoqalConfig(
             put("languageModelsSettings", languageModelsSettings.toJson())
             put("textToSpeechSettings", textToSpeechSettings.toJson())
             put("promptLibrarySettings", promptLibrarySettings.toJson())
+            put("socialSettings", socialSettings.toJson())
         }
     }
 
@@ -54,7 +59,8 @@ open class VoqalConfig(
             speechToTextSettings = speechToTextSettings.withKeysRemoved(),
             languageModelsSettings = languageModelsSettings.withKeysRemoved(),
             textToSpeechSettings = textToSpeechSettings.withKeysRemoved(),
-            promptLibrarySettings = promptLibrarySettings.withKeysRemoved()
+            promptLibrarySettings = promptLibrarySettings.withKeysRemoved(),
+            socialSettings = socialSettings.withKeysRemoved()
         )
     }
 
@@ -65,7 +71,8 @@ open class VoqalConfig(
             speechToTextSettings = speechToTextSettings.withPiiRemoved(),
             languageModelsSettings = languageModelsSettings.withPiiRemoved(),
             textToSpeechSettings = textToSpeechSettings.withPiiRemoved(),
-            promptLibrarySettings = promptLibrarySettings.withPiiRemoved()
+            promptLibrarySettings = promptLibrarySettings.withPiiRemoved(),
+            socialSettings = socialSettings.withPiiRemoved()
         )
     }
 
@@ -75,7 +82,8 @@ open class VoqalConfig(
         speechToTextSettings: SpeechToTextSettings = this.speechToTextSettings,
         languageModelsSettings: LanguageModelsSettings = this.languageModelsSettings,
         textToSpeechSettings: TextToSpeechSettings = this.textToSpeechSettings,
-        promptLibrarySettings: PromptLibrarySettings = this.promptLibrarySettings
+        promptLibrarySettings: PromptLibrarySettings = this.promptLibrarySettings,
+        socialSettings: SocialSettings = this.socialSettings
     ): VoqalConfig {
         return VoqalConfig(
             microphoneSettings = microphoneSettings,
@@ -83,7 +91,8 @@ open class VoqalConfig(
             speechToTextSettings = speechToTextSettings,
             languageModelsSettings = languageModelsSettings,
             textToSpeechSettings = textToSpeechSettings,
-            promptLibrarySettings = promptLibrarySettings
+            promptLibrarySettings = promptLibrarySettings,
+            socialSettings = socialSettings
         )
     }
 }

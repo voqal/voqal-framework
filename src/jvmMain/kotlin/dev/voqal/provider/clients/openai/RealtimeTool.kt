@@ -3,35 +3,36 @@ package dev.voqal.provider.clients.openai
 import com.intellij.openapi.project.Project
 import dev.voqal.services.*
 import io.ktor.websocket.*
+import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import kotlinx.coroutines.launch
 import java.util.concurrent.atomic.AtomicBoolean
 
 class RealtimeTool(
     private val project: Project,
-    private val session: DefaultWebSocketSession
+    private val session: DefaultWebSocketSession,
+    convoId: String
 ) {
 
     private val log = project.getVoqalLogger(this::class)
     private val executeAllowed = AtomicBoolean(false)
-    private val toolExecuted = AtomicBoolean(false)
     private var executableTool: (() -> Unit)? = null
-    private var toolArgs = ""
+    private var executionLog = JsonArray()
+
+    init {
+        log.info("Initializing RealtimeTool. Convo id: $convoId")
+    }
 
     fun executeTool(json: JsonObject) {
         executableTool = {
-            if (toolExecuted.compareAndSet(false, true)) {
-                doExecution(json)
-            } else {
-                log.warn("Tool already executed")
-            }
+            doExecution(json)
         }
         if (!executeAllowed.get()) {
-//            log.warn("Tool execution is not allowed")
-//            return
+            log.warn("Tool execution is not allowed")
+            return
         }
 
-        toolArgs = json.toString()
+        executionLog.add(json)
         executableTool!!.invoke()
     }
 

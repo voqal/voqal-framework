@@ -147,8 +147,13 @@ class RealtimeSession(
 
     private fun updateSession() {
         val configService = project.service<VoqalConfigService>()
-        val toolService = project.service<VoqalToolService>()
         val promptName = configService.getActivePromptName()
+        if (configService.getConfig().promptLibrarySettings.prompts.none { it.promptName == promptName }) {
+            log.warn("Prompt $promptName not found in prompt library")
+            return
+        }
+
+        val toolService = project.service<VoqalToolService>()
         var nopDirective = project.service<VoqalDirectiveService>().createDirective(
             transcription = SpokenTranscript("n/a", null),
             promptName = promptName,
@@ -271,7 +276,7 @@ class RealtimeSession(
                                 }
                                 val convoId = responseIdToConvoId[responseId]!!
                                 val realtimeTool = realtimeToolMap.getOrPut(convoId) {
-                                    RealtimeTool(project, session)
+                                    RealtimeTool(project, session, convoId)
                                 }
                                 realtimeTool.executeTool(json)
                             } else if (json.getString("type") == "response.audio.delta") {
@@ -327,7 +332,7 @@ class RealtimeSession(
                                 realtimeAudio.startAudio()
 
                                 val realtimeTool = realtimeToolMap.getOrPut(convoId) {
-                                    RealtimeTool(project, session)
+                                    RealtimeTool(project, session, convoId)
                                 }
                                 realtimeTool.allowExecution()
                             } else if (json.getString("type") == "response.audio_transcript.done") {

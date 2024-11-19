@@ -10,9 +10,10 @@ import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.project.Project
 import dev.voqal.assistant.VoqalDirective
 import dev.voqal.assistant.VoqalResponse
-import dev.voqal.assistant.tool.ContextUpdate
 import dev.voqal.assistant.memory.MemorySlice
 import dev.voqal.assistant.processing.ResponseParser
+import dev.voqal.assistant.tool.ContextUpdate
+import dev.voqal.config.settings.PromptSettings
 import dev.voqal.config.settings.PromptSettings.FunctionCalling
 import dev.voqal.services.*
 import io.vertx.core.json.JsonObject
@@ -114,9 +115,9 @@ class LocalMemorySlice(
                     model = ModelId(lmSettings.modelName),
                     messages = getMessages(),
                     tools = requestTools,
-//                    toolChoice = if (requestTools != null) {
-//                        ToolChoice.Mode("required")
-//                    } else null,
+                    toolChoice = if (promptSettings.toolChoice == PromptSettings.ToolChoice.REQUIRED) {
+                        ToolChoice.Mode("required")
+                    } else null,
                     //responseFormat = ChatResponseFormat.JsonObject, //todo: config JsonFormat, non-markdown tools
                     seed = lmSettings.seed,
                     temperature = lmSettings.temperature,
@@ -156,9 +157,9 @@ class LocalMemorySlice(
                     model = ModelId(lmSettings.modelName),
                     messages = getMessages(),
                     tools = requestTools,
-//                    toolChoice = if (requestTools != null) {
-//                        ToolChoice.Mode("required")
-//                    } else null,
+                    toolChoice = if (promptSettings.toolChoice == PromptSettings.ToolChoice.REQUIRED) {
+                        ToolChoice.Mode("required")
+                    } else null,
                     //responseFormat = ChatResponseFormat.JsonObject, //todo: config JsonFormat, non-markdown tools
                     seed = lmSettings.seed,
                     temperature = lmSettings.temperature,
@@ -265,7 +266,7 @@ class LocalMemorySlice(
                 chunkProcessingChannel.close()
                 processingJob.join()
 
-                completion = toChatCompletion(deltaRole!!, deltaToolCall, chunks, fullText.toString())
+                completion = toChatCompletion(deltaRole!!, deltaToolCall, chunks, fullText.toString(), promptSettings.editMode)
             } else {
                 completion = llmProvider.chatCompletion(request, directive)
             }
@@ -273,12 +274,14 @@ class LocalMemorySlice(
 
             try {
                 //todo: could just use JsonObject()
-                val toolCall = completion.choices.first().message.toolCalls!!.first() as ToolCall.Function
-                val result = PartialJsonParser.parse(toolCall.function.arguments) as Map<String, Any>
-                val listener = partialContextListeners[toolCall.function.name]
-                if (listener != null) {
-                    log.debug { "Sending final context update to listener" }
-                    listener.invoke(ContextUpdate(result, true))
+                if (completion.choices.first().message.toolCalls != null) {
+                    val toolCall = completion.choices.first().message.toolCalls!!.first() as ToolCall.Function
+                    val result = PartialJsonParser.parse(toolCall.function.arguments) as Map<String, Any>
+                    val listener = partialContextListeners[toolCall.function.name]
+                    if (listener != null) {
+                        log.debug { "Sending final context update to listener" }
+                        listener.invoke(ContextUpdate(result, true))
+                    }
                 }
             } catch (e: Throwable) {//todo: ```json {} ```
                 log.warn("Failed to parse tool call arguments: ${e.message}", e)
@@ -357,11 +360,15 @@ class LocalMemorySlice(
         role: Role,
         toolCall: ToolCallChunk?,
         chunks: List<ChatCompletionChunk>,
-        fullText: String
+        fullText: String,
+        editMode: Boolean
     ): ChatCompletion {
+        var messageContent: Content? = null
         var toolCall = toolCall
         val chunk = chunks.last()
-        if (toolCall == null) {
+        if (editMode) {
+            messageContent = TextContent(content = fullText)
+        } else if (toolCall == null) {
             //default to answer_question tool
             toolCall = ToolCallChunk(
                 index = 0,
@@ -390,13 +397,15 @@ class LocalMemorySlice(
                     index = 0,
                     message = ChatMessage(
                         role = role,
-                        messageContent = null,
-                        toolCalls = listOf(toolCall.let {
-                            ToolCall.Function(
-                                id = it.id!!,
-                                function = it.function!!
-                            )
-                        })
+                        messageContent = messageContent,
+                        toolCalls = if (toolCall != null) {
+                            listOf(toolCall.let {
+                                ToolCall.Function(
+                                    id = it.id!!,
+                                    function = it.function!!
+                                )
+                            })
+                        } else null
                     )
                 )
             ),

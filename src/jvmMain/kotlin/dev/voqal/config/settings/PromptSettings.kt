@@ -20,7 +20,8 @@ data class PromptSettings(
     val streamCompletions: Boolean = false,
     val functionCalling: FunctionCalling = FunctionCalling.MARKDOWN,
     val separateInitialUserMessage: Boolean = false,
-    val editMode: Boolean = false
+    val editMode: Boolean = false,
+    val toolChoice: ToolChoice = ToolChoice.NONE
 ) : ConfigurableSettings {
 
     /**
@@ -39,11 +40,12 @@ data class PromptSettings(
         vectorStoreId = json.getString("vectorStoreId", ""),
         assistantId = json.getString("assistantId", ""),
         assistantThreadId = json.getString("assistantThreadId", ""),
-        editFormat = EditFormat.valueOf(json.getString("editFormat", EditFormat.FULL_TEXT.name)),
+        editFormat = EditFormat.lenientValueOf(json.getString("editFormat", EditFormat.FULL_TEXT.name)),
         streamCompletions = json.getBoolean("streamCompletions", false),
         functionCalling = FunctionCalling.lenientValueOf(json.getString("functionCalling", FunctionCalling.MARKDOWN.name)),
         separateInitialUserMessage = json.getBoolean("separateInitialUserMessage", false),
-        editMode = json.getBoolean("editMode", false)
+        editMode = json.getBoolean("editMode", false),
+        toolChoice = ToolChoice.lenientValueOf(json.getString("toolChoice", ToolChoice.NONE.name))
     )
 
     override fun toJson(): JsonObject {
@@ -65,6 +67,7 @@ data class PromptSettings(
             put("functionCalling", functionCalling.name)
             put("separateInitialUserMessage", separateInitialUserMessage)
             put("editMode", editMode)
+            put("toolChoice", toolChoice.name)
         }
     }
 
@@ -120,6 +123,20 @@ data class PromptSettings(
             @JvmStatic
             fun lenientValueOf(str: String): FunctionCalling {
                 return FunctionCalling.valueOf(str.replace(" ", "_").uppercase())
+            }
+        }
+    }
+
+    enum class ToolChoice {
+        NONE,
+        REQUIRED;
+
+        val displayName = name.replace("_", " ").lowercase().capitalize()
+
+        companion object {
+            @JvmStatic
+            fun lenientValueOf(str: String): ToolChoice {
+                return ToolChoice.valueOf(str.replace(" ", "_").uppercase())
             }
         }
     }

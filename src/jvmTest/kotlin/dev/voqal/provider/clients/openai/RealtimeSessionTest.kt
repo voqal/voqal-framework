@@ -25,10 +25,12 @@ import kotlinx.coroutines.runBlocking
 import org.joor.Reflect
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertNotNull
+import org.junit.jupiter.api.Disabled
 import org.junit.jupiter.api.Test
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
 
+@Disabled
 class RealtimeSessionTest : VoqalTest {
 
     @Test

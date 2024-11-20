@@ -24,7 +24,6 @@ class RealtimeAudio(private val project: Project, convoId: String) {
     private val audioPlayed = AtomicBoolean(false)
     private val audioFinished = AtomicBoolean(false)
     private val audioWrote = AtomicBoolean(false)
-    private val audioReady = AtomicBoolean(false)
     private var pis = PipedInputStream()
     private var pos = PipedOutputStream()
     private val channel = Channel<Job>(capacity = Channel.UNLIMITED).apply {
@@ -50,9 +49,9 @@ class RealtimeAudio(private val project: Project, convoId: String) {
             }
         })
 
-        if (audioReady.get() && !audioPlaying.get()) {
+        if (!audioPlaying.get()) {
             log.debug { "Started audio via first delta" }
-            startAudio(true)
+            startAudio()
         }
     }
 
@@ -71,21 +70,13 @@ class RealtimeAudio(private val project: Project, convoId: String) {
         audioFinished.set(true)
     }
 
-    fun startAudio(firstDelta: Boolean = false) {
+    private fun startAudio() {
         if (audioPlayed.get()) {
             log.debug { "Audio has already been played" }
-            return
-        } else if (!audioWrote.get()) {
-            log.debug { "No audio data to play" }
-            audioReady.set(true)
             return
         } else if (!audioPlaying.compareAndSet(false, true)) {
             log.debug { "Audio is already playing" }
             return
-        }
-
-        if (!firstDelta) {
-            log.debug { "Started audio via startAudio" }
         }
 
         project.scope.launch {
@@ -108,7 +99,7 @@ class RealtimeAudio(private val project: Project, convoId: String) {
             pis.close()
             channel.close()
         } catch (e: Throwable) {
-            e.printStackTrace()
+            log.error(e) { "Error stopping audio" }
         }
     }
 }

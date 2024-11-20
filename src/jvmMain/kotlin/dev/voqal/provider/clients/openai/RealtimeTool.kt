@@ -6,7 +6,6 @@ import io.ktor.websocket.*
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import kotlinx.coroutines.launch
-import java.util.concurrent.atomic.AtomicBoolean
 
 class RealtimeTool(
     private val project: Project,
@@ -15,7 +14,6 @@ class RealtimeTool(
 ) {
 
     private val log = project.getVoqalLogger(this::class)
-    private val executeAllowed = AtomicBoolean(false)
     private var executableTool: (() -> Unit)? = null
     private var executionLog = JsonArray()
 
@@ -27,10 +25,6 @@ class RealtimeTool(
         executableTool = {
             doExecution(json)
         }
-        if (!executeAllowed.get()) {
-            log.warn("Tool execution is not allowed")
-            return
-        }
 
         executionLog.add(json)
         try {
@@ -38,13 +32,6 @@ class RealtimeTool(
         } catch (e: Exception) {
             log.error(e) { "Error executing tool" }
             log.error { "Tool args: $json" }
-        }
-    }
-
-    fun allowExecution() {
-        executeAllowed.set(true)
-        if (executableTool != null) {
-            executableTool!!.invoke()
         }
     }
 

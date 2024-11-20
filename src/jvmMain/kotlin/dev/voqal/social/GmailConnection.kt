@@ -37,15 +37,20 @@ class GmailConnection(project: Project, var accessToken: String) {
     private val service = Gmail.Builder(HTTP_TRANSPORT, JSON_FACTORY, requestInitializer).build()
     private val log = project.getVoqalLogger(this::class)
 
-    fun getUnreadEmails(): JsonArray {//todo: exclude emails with drafts
+    fun getUnreadEmails(maxResults: Long = 50): JsonArray {//todo: exclude emails with drafts
         val query = "is:unread in:inbox"
-        val messagesResponse = service.users().messages().list("me").setQ(query).execute()
+        val messagesResponse = service.users().messages()
+            .list("me")
+            .setQ(query)
+            .setMaxResults(maxResults)
+            .execute()
         val messages = messagesResponse.messages
 
         if (messages.isNullOrEmpty()) {
             log.debug { "No unread messages found" }
             return JsonArray()
         }
+        log.debug { "Found ${messages.size} (max=$maxResults) unread messages" }
 
         val unreadEmails = JsonArray()
         for (message in messages) {

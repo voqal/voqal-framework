@@ -32,7 +32,7 @@ class RealtimeAudio(private val project: Project, convoId: String) {
     }
 
     init {
-        log.debug("Initializing RealtimeAudio. Convo id: $convoId")
+        log.debug { "Initializing RealtimeAudio. Convo id: $convoId" }
         pos.connect(pis)
     }
 
@@ -43,7 +43,7 @@ class RealtimeAudio(private val project: Project, convoId: String) {
                 pos.write(Base64.getDecoder().decode(json.getString("delta")))
             } catch (e: Throwable) {
                 if (audioPlaying.get()) {
-                    log.error("Error writing audio data", e)
+                    log.error(e) { "Error writing audio data" }
                 } else {
                     log.trace { "Ignoring audio data error on non-playing audio" }
                 }
@@ -62,7 +62,7 @@ class RealtimeAudio(private val project: Project, convoId: String) {
                 pos.write(SharedAudioCapture.EMPTY_BUFFER)
             } catch (e: Throwable) {
                 if (audioPlaying.get()) {
-                    log.error("Error writing audio data", e)
+                    log.error(e) { "Error writing audio data" }
                 } else {
                     log.trace { "Ignoring audio data error on non-playing audio" }
                 }
@@ -73,14 +73,14 @@ class RealtimeAudio(private val project: Project, convoId: String) {
 
     fun startAudio(firstDelta: Boolean = false) {
         if (audioPlayed.get()) {
-            log.debug("Audio has already been played")
+            log.debug { "Audio has already been played" }
             return
         } else if (!audioWrote.get()) {
-            log.debug("No audio data to play")
+            log.debug { "No audio data to play" }
             audioReady.set(true)
             return
         } else if (!audioPlaying.compareAndSet(false, true)) {
-            log.debug("Audio is already playing")
+            log.debug { "Audio is already playing" }
             return
         }
 
@@ -97,11 +97,11 @@ class RealtimeAudio(private val project: Project, convoId: String) {
 
     fun stopAudio() {
         if (!audioPlaying.get()) {
-            log.debug("Audio is not playing")
+            log.trace { "Audio is not playing" }
             return
         }
 
-        log.debug("Stopping audio")
+        log.debug { "Stopping audio" }
         try {
             audioPlaying.set(false)
             pos.close()

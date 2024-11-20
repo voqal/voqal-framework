@@ -38,6 +38,7 @@ class GmailConnection(project: Project, var accessToken: String) {
     private val log = project.getVoqalLogger(this::class)
 
     fun getUnreadEmails(maxResults: Long = 50): JsonArray {//todo: exclude emails with drafts
+        log.debug { "Fetching unread emails" }
         val query = "is:unread in:inbox"
         val messagesResponse = service.users().messages()
             .list("me")

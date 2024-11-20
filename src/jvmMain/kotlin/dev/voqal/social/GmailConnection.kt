@@ -58,12 +58,16 @@ class GmailConnection(project: Project, var accessToken: String) {
             val fullMessage = service.users().messages().get("me", message.id).setFormat("full").execute()
             val fullMessageJson = fullMessage.toPrettyString()
             val fullJson = JsonObject(fullMessageJson)
-            val body = fullMessage.payload.parts?.firstOrNull { it.mimeType == "text/plain" }?.body?.data?.let {
-                String(Base64.decodeBase64(it))
-            } ?: "No Body"
+            val messageBodyData = fullMessage.payload.body.decodeData()
+            var body = if (messageBodyData != null) {
+                String(messageBodyData)
+            } else {
+                fullMessage.payload.parts.firstOrNull { it.mimeType == "text/plain" }?.body?.data?.let {
+                    String(Base64.decodeBase64(it))
+                } ?: "Faile to decode message body"
+            }
             fullJson.put("body", body)
 
-            //replace headers with a map
             val headers = fullMessage.payload.headers.associate { it.name to it.value }
             fullJson.put("headers", JsonObject(headers))
 

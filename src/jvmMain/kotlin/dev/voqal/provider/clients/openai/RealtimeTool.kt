@@ -33,7 +33,12 @@ class RealtimeTool(
         }
 
         executionLog.add(json)
-        executableTool!!.invoke()
+        try {
+            executableTool!!.invoke()
+        } catch (e: Exception) {
+            log.error(e) { "Error executing tool" }
+            log.error { "Tool args: $json" }
+        }
     }
 
     fun allowExecution() {

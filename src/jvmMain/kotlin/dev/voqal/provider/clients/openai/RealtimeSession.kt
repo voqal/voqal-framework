@@ -237,7 +237,7 @@ class RealtimeSession(
                                 }
                             }
 
-                            if (previousConvoId == null && json.getString("type") == "conversation.item.created") {
+                            if (json.getString("type") == "conversation.item.created" && json.getJsonObject("item").getString("type") == "message") {
                                 previousConvoId = json.getJsonObject("item").getString("id")!!
                             } else if (json.getString("type") == "response.created") {
                                 val responseId = json.getJsonObject("response").getString("id")!!
@@ -281,10 +281,6 @@ class RealtimeSession(
                                 realtimeTool.executeTool(json)
                             } else if (json.getString("type") == "response.audio.delta") {
                                 val responseId = json.getString("response_id")
-                                if (ignoreResponseIds.contains(responseId)) {
-                                    log.info("Ignoring response $responseId")
-                                    continue
-                                }
                                 val convoId = responseIdToConvoId[responseId]!!
                                 val realtimeAudio = realtimeAudioMap.getOrPut(convoId) {
                                     RealtimeAudio(project, convoId)
@@ -299,7 +295,6 @@ class RealtimeSession(
                                 val convoId = responseIdToConvoId[responseId]!!
                                 val realtimeAudio = realtimeAudioMap[convoId]!!
                                 realtimeAudio.finishAudio()
-                                previousConvoId = null
                             } else if (json.getString("type") == "input_audio_buffer.speech_started") {
                                 log.info("Realtime speech started")
                                 stopCurrentVoice()
@@ -336,6 +331,11 @@ class RealtimeSession(
                                 }
                                 realtimeTool.allowExecution()
                             } else if (json.getString("type") == "response.audio_transcript.done") {
+                                val responseId = json.getString("response_id")
+                                if (ignoreResponseIds.contains(responseId)) {
+                                    log.info("Ignoring response $responseId")
+                                    continue
+                                }
                                 val transcript = json.getString("transcript")
                                 log.info("Assistant transcript: $transcript")
                                 val chatContentManager = project.service<ChatToolWindowContentManager>()

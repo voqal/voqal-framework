@@ -90,12 +90,13 @@ class RealtimeAudio(private val project: Project, convoId: String) {
 
         project.scope.launch {
             project.service<VoqalVoiceService>().playStreamingWavFile(pis)
+            audioPlayed.set(true)
             stopAudio()
         }
     }
 
     fun stopAudio() {
-        if (!audioPlayed.compareAndSet(false, true)) {
+        if (!audioPlaying.get()) {
             log.debug("Audio is not playing")
             return
         }

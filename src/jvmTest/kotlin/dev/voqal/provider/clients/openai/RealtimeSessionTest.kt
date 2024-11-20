@@ -268,5 +268,102 @@ class RealtimeSessionTest : VoqalTest {
         socketSession!!.close()
         server.stop()
     }
-}
 
+    @Test
+    fun emptyThenOutput(): Unit = runBlocking {
+        var socketSession: DefaultWebSocketSession? = null
+        val server = embeddedServer(Netty, port = 8080) {
+            install(WebSockets)
+
+            routing {
+                webSocket("/test") {
+                    socketSession = this
+
+                    for (frame in incoming) {
+                        frame as? Frame.Text ?: continue
+                        val msg = JsonObject(frame.readText())
+                        if (msg.getString("type") == "session.update") {
+                            continue
+                        }
+                    }
+                }
+            }
+        }
+        server.start(false)
+
+        val testContext = VertxTestContext()
+        var executionCount = 0
+        val project = MockProject().apply {
+            chatToolWindowContentManager = object : MockChatToolWindowContentManager() {
+                override fun addUserMessage(transcript: String, speechId: String?) {
+                    testContext.verify {
+                        assertEquals("Can you hear me?", transcript)
+                    }
+                }
+
+                override fun addAssistantMessage(transcript: String, speechId: String?) {
+                    testContext.verify {
+                        assertEquals("Yes, I can hear you. How can I assist you?", transcript)
+                    }
+                    testContext.completeNow()
+                }
+            }
+
+            toolService = object : MockToolService() {
+                override fun getAvailableTools(): Map<String, VoqalTool> {
+                    return mapOf()
+                }
+
+                override fun executeTool(args: String?, voqalTool: VoqalTool, onFinish: suspend (Any?) -> Unit) {
+                    runBlocking { onFinish.invoke(null) }
+                }
+            }
+        }
+
+        val session = RealtimeSession(project, "ws://localhost:8080/test")
+        GlobalScope.launch {
+            delay(1000)
+            File("src/jvmTest/resources/realtime/empty-then-output.jsonl").forEachLine {
+                runBlocking {
+                    socketSession!!.send(it)
+                }
+            }
+        }
+        errorOnTimeout(testContext)
+
+        val realtimeAudioMap = Reflect.on(session).get<Map<String, RealtimeAudio>>("realtimeAudioMap")
+        assertEquals(2, realtimeAudioMap.size)
+        val realtimeAudioIgnore = realtimeAudioMap["item_AVIaOfQIzykDu3ClgYwD0"]
+        assertNotNull(realtimeAudioIgnore)
+        assertEquals(false, Reflect.on(realtimeAudioIgnore).get<AtomicBoolean>("audioPlaying").get())
+        assertEquals(false, Reflect.on(realtimeAudioIgnore).get<AtomicBoolean>("audioPlayed").get())
+        assertEquals(false, Reflect.on(realtimeAudioIgnore).get<AtomicBoolean>("audioFinished").get())
+        assertEquals(true, Reflect.on(realtimeAudioIgnore).get<AtomicBoolean>("audioWrote").get())
+        assertEquals(false, Reflect.on(realtimeAudioIgnore).get<AtomicBoolean>("audioReady").get())
+
+        val realtimeAudioPlay = realtimeAudioMap["item_AVIadgTHpypmKLJbMT5fL"]
+        assertNotNull(realtimeAudioPlay)
+        assertEquals(false, Reflect.on(realtimeAudioPlay).get<AtomicBoolean>("audioPlaying").get())
+        assertEquals(true, Reflect.on(realtimeAudioPlay).get<AtomicBoolean>("audioPlayed").get())
+        assertEquals(true, Reflect.on(realtimeAudioPlay).get<AtomicBoolean>("audioFinished").get())
+        assertEquals(true, Reflect.on(realtimeAudioPlay).get<AtomicBoolean>("audioWrote").get())
+        assertEquals(true, Reflect.on(realtimeAudioPlay).get<AtomicBoolean>("audioReady").get())
+
+        val realtimeToolMap = Reflect.on(session).get<Map<String, RealtimeTool>>("realtimeToolMap")
+        assertEquals(1, realtimeToolMap.size)
+        val realtimeTool = realtimeToolMap["item_AVIadgTHpypmKLJbMT5fL"]
+        assertNotNull(realtimeTool)
+        assertEquals(true, Reflect.on(realtimeTool).get<AtomicBoolean>("executeAllowed").get())
+        val executionLog = Reflect.on(realtimeTool).get<JsonArray>("executionLog")
+        assertEquals(0, executionLog.size())
+
+        val responseIdToConvoId = Reflect.on(session).get<Map<String, String>>("responseIdToConvoId")
+        assertEquals(2, responseIdToConvoId.size)
+        assertEquals("item_AVIaOfQIzykDu3ClgYwD0", responseIdToConvoId["resp_AVIaPSeR8EfUzv23xhAw7"])
+        assertEquals("item_AVIadgTHpypmKLJbMT5fL", responseIdToConvoId["resp_AVIaeya5DNeVomgPoTuc4"])
+
+        session.dispose()
+        socketSession!!.close()
+        server.stop()
+    }
+}

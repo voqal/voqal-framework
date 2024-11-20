@@ -65,7 +65,8 @@ class RealtimeSession(
         "Uh-huh.",
         "Mm-hmm",
         "ahem",
-        "Mm-hm."
+        "Mm-hm.",
+        "Mm-mm."
     )
     private var previousConvoId: String? = null
     private val responseIdToConvoId = mutableMapOf<String, String>()

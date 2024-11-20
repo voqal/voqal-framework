@@ -12,7 +12,7 @@ class VoqalProClient(
 ) : AzureClient(
     name,
     project,
-    "https://voqal-proxy.voqaldev.workers.dev/",
+    "https://ai.voqal.dev/",
     providerKey,
     deployment,
     audioModality,

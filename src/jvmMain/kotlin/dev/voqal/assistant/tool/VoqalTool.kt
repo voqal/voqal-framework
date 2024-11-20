@@ -21,4 +21,5 @@ abstract class VoqalTool {
     open fun canShortcut(project: Project, call: FunctionCall): Boolean = false
     open suspend fun getTranscriptIntent(project: Project, transcript: SpokenTranscript): DetectedIntent? = null
     open val manualConfirm: Boolean = false
+    open val triggerResponse: Boolean = false
 }

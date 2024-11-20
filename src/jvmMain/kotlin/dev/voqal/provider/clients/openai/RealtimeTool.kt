@@ -68,9 +68,13 @@ class RealtimeTool(
                     put("output", it.toString())
                 })
             }.toString()))
-            session.send(Frame.Text(JsonObject().apply {
-                put("type", "response.create")
-            }.toString()))
+
+            if (voqalTool.triggerResponse) {
+                log.debug { "Triggering response to results of tool: $tool" }
+                session.send(Frame.Text(JsonObject().apply {
+                    put("type", "response.create")
+                }.toString()))
+            }
         }
 
         if (!voqalTool.manualConfirm) {

@@ -419,7 +419,10 @@ class SharedAudioCapture(private val project: Project) {
     fun restart() {
         log.debug { "Restarting audio capture" }
         cancel()
-        startCapture()
+
+        if (project.service<VoqalConfigService>().getConfig().microphoneSettings.enabled) {
+            startCapture()
+        }
     }
 
     private fun getAvailableMicrophones(): List<Mixer.Info> {

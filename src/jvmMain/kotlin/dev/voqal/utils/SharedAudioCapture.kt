@@ -68,7 +68,7 @@ class SharedAudioCapture(private val project: Project) {
     private val log = project.getVoqalLogger(this::class)
     private val listeners: MutableList<AudioDataListener> = CopyOnWriteArrayList()
     private var paused = false
-    private var active = true
+    private var active = false
     private var thread: Thread? = null
     private var microphoneName: String = ""
     private var line: SharedAudioLine? = null
@@ -131,7 +131,7 @@ class SharedAudioCapture(private val project: Project) {
             }
         }
 
-        var vadProvider: VoiceDetectionProvider? = null
+        var vadProvider: VoiceDetectionProvider? = config.voiceDetectionSettings.provider
         configService.onConfigChange {
             val newVadProvider = it.voiceDetectionSettings.provider
             if (vadProvider == VoiceDetectionProvider.NONE && newVadProvider != VoiceDetectionProvider.NONE) {
@@ -142,6 +142,12 @@ class SharedAudioCapture(private val project: Project) {
                 log.info { "Voice detection disabled" }
                 vadProvider = newVadProvider
                 restart()
+            } else if (it.microphoneSettings.enabled && !active) {
+                log.info { "Microphone settings changed. Restarting audio capture" }
+                restart()
+            } else if (!it.microphoneSettings.enabled && active) {
+                log.info { "Microphone settings changed. Stopping audio capture" }
+                cancel()
             }
 
             project.scope.launch {

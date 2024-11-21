@@ -1,9 +1,8 @@
 package dev.voqal.assistant.template
 
-import dev.voqal.assistant.VoqalDirective
 import dev.voqal.services.VoqalConfigService.Companion.toHeaderMap
 import dev.voqal.services.VoqalDirectiveService
-import dev.voqal.services.getVoqalLogger
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
 import io.ktor.client.plugins.*
 import io.ktor.client.request.*
@@ -21,6 +20,7 @@ import java.time.Instant
 
 class SlurpUrlExtension : AbstractExtension() {
 
+    private val log = KotlinLogging.logger {}
     private val cache = mutableMapOf<String, Pair<Instant, Any?>>()
 
     override fun getFunctions() = mapOf(
@@ -51,8 +51,6 @@ class SlurpUrlExtension : AbstractExtension() {
             context: EvaluationContext,
             lineNumber: Int
         ): Any? = runBlocking {
-            val project = (context.getVariable("directive") as? VoqalDirective)?.project ?: return@runBlocking null
-            val log = project.getVoqalLogger(this::class)
             val url = args["url"] as? String ?: return@runBlocking null
             val cacheTime = parseDuration(args["cacheTime"] as? String ?: "0m")
             val headerMap = toHeaderMap(args["headers"] as? String ?: "")
@@ -60,11 +58,11 @@ class SlurpUrlExtension : AbstractExtension() {
             // Check if the URL is in the cache and if it is still valid
             val cachedResponse = cache[url]
             if (cachedResponse != null && Instant.now().isBefore(cachedResponse.first.plus(cacheTime))) {
-                log.info("Using cached response for $url")
+                log.trace { "Using cached response for $url" }
                 return@runBlocking cachedResponse.second
             }
 
-            log.info("Slurping $url with headers $headerMap")
+            log.debug { "Slurping $url with headers $headerMap" }
             try {
                 val response = client.get(url) {
                     headers { headerMap.forEach { (key, value) -> append(key, value) } }

@@ -4,7 +4,7 @@ import dev.voqal.config.ConfigurableSettings
 import io.vertx.core.json.JsonObject
 
 data class SocialConnectionSettings(
-    val provider: SCProvider = SCProvider.GMAIL,
+    val provider: SCProvider = SCProvider.GMAIL_API,
     val refreshToken: String = "",
     val scope: String = ""
 ) : ConfigurableSettings {
@@ -13,7 +13,7 @@ data class SocialConnectionSettings(
      * Need to set defaults so config changes don't reset stored config due to parse error.
      */
     constructor(json: JsonObject) : this(
-        provider = SCProvider.lenientValueOf(json.getString("provider") ?: SCProvider.GMAIL.name),
+        provider = SCProvider.lenientValueOf(json.getString("provider") ?: SCProvider.GMAIL_API.name),
         refreshToken = json.getString("refreshToken") ?: "",
         scope = json.getString("scope") ?: ""
     )
@@ -37,7 +37,7 @@ data class SocialConnectionSettings(
     }
 
     enum class SCProvider(val displayName: String) {
-        GMAIL("Gmail");
+        GMAIL_API("Gmail API");
 
         companion object {
             @JvmStatic

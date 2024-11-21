@@ -12,6 +12,7 @@ import io.pebbletemplates.pebble.extension.AbstractExtension
 import io.pebbletemplates.pebble.extension.Function
 import io.pebbletemplates.pebble.template.EvaluationContext
 import io.pebbletemplates.pebble.template.PebbleTemplate
+import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
@@ -69,15 +70,26 @@ class SlurpUrlExtension : AbstractExtension() {
                     headers { headerMap.forEach { (key, value) -> append(key, value) } }
                 }
                 val responseBody = response.bodyAsText()
-                val json = JsonObject(responseBody)
+                val json = try {
+                    JsonObject(responseBody)
+                } catch (_: Exception) {
+                    try {
+                        JsonArray(responseBody)
+                    } catch (_: Exception) {
+                        log.warn { "Response from $url is not a JSON object or array. Response: $responseBody" }
+                        cache[url] = Instant.now() to null
+                        return@runBlocking null
+                    }
+                }
+
                 val parsedResponse = VoqalDirectiveService.convertJsonElementToMap(
                     Json.parseToJsonElement(json.toString())
                 )
-                // Cache the new response with current time
                 cache[url] = Instant.now() to parsedResponse
                 return@runBlocking parsedResponse
             } catch (e: Exception) {
-                log.error("Error fetching URL: $url", e)
+                log.error(e) { "Error fetching URL: $url" }
+                cache[url] = Instant.now() to null
                 return@runBlocking null
             }
         }

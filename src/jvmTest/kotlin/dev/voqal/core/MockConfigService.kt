@@ -92,6 +92,6 @@ class MockConfigService(
     }
 
     override fun getActivePromptName(): String {
-        return "default"
+        return "voqal"
     }
 }

@@ -20,7 +20,6 @@ class VoqalTemplateEngine {
                 )
                 .autoEscaping(false)
                 .loader(StringLoader())
-                .extension(ComputerExtension())
                 .extension(AddUserContextExtension())
                 .extension(GetUserContextExtension())
                 .extension(SlurpUrlExtension())
@@ -32,18 +31,6 @@ class VoqalTemplateEngine {
 
         fun getTemplate(templateName: String): PebbleTemplate {
             return ENGINE.getTemplate(templateName)
-        }
-
-        //todo: dynamic
-        fun getGlobalVariables(): MutableMap<String, Any> {
-            val globalVariables = ENGINE.extensionRegistry.globalVariables.toMutableMap()
-            val computer = globalVariables["computer"]
-            if (computer != null) {
-                val computerVars = (globalVariables["computer"] as Map<String, Any?>).toMutableMap()
-                computerVars["currentTime"] = (computerVars["currentTime"] as ComputerExtension.LambdaWrapper<*>).get()
-                globalVariables["computer"] = computerVars
-            }
-            return globalVariables
         }
     }
 }

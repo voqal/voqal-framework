@@ -31,15 +31,6 @@ data class VoqalDirective(
         return contextMap[key] as T
     }
 
-    val directiveServices = mutableMapOf<Class<*>, Any>()
-
-    inline fun <reified T> service(): T {
-        if (directiveServices.containsKey(T::class.java)) {
-            return directiveServices[T::class.java] as T
-        }
-        return project.service()
-    }
-
     /**
      * Creates the final prompt which will be sent to LLM.
      */

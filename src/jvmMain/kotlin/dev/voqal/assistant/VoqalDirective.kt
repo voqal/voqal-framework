@@ -58,7 +58,7 @@ data class VoqalDirective(
                 }
             }
         )
-        val fullPrompt = writer.toString()
+        val fullPrompt = writer.toString().replace("\r\n", "\n")
 
         //remove front matter
         var cleanPrompt = fullPrompt

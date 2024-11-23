@@ -87,7 +87,7 @@ class GoogleApiClient(
 
         throwIfError(response)
         val body = JsonObject(response.bodyAsText())
-        log.debug("Completion: $body")
+        log.debug { "Completion: $body" }
         val completion = ChatCompletion(
             id = UUID.randomUUID().toString(),
             created = System.currentTimeMillis(),
@@ -135,7 +135,14 @@ class GoogleApiClient(
                                             index = index,
                                             delta = ChatDelta(
                                                 role = choices[0].message.role,
-                                                content = it.message.content
+                                                content = it.message.content,
+                                                toolCalls = it.message.toolCalls?.mapIndexed { index, call ->
+                                                    ToolCallChunk(
+                                                        index = index,
+                                                        id = (call as ToolCall.Function).id,
+                                                        function = call.function
+                                                    )
+                                                }
                                             )
                                         )
                                     },
@@ -157,8 +164,15 @@ class GoogleApiClient(
 
         if (directive?.assistant?.promptSettings?.functionCalling == FunctionCalling.NATIVE) {
             requestJson.put("tools", JsonArray().apply {
-                val toolsArray = JsonArray(request.tools?.map { it.asDirectiveTool() }
-                    ?.map { JsonObject(Json.encodeToString(it)) })
+                val toolsArray = JsonArray(
+                    request.tools?.map {
+                        if (directive.assistant.promptSettings?.decomposeDirectives == true) {
+                            it.asDirectiveTool()
+                        } else {
+                            it
+                        }
+                    }?.map { JsonObject(Json.encodeToString(it)) }
+                )
                 val functionDeclarations = toolsArray.map {
                     val jsonObject = it as JsonObject
                     jsonObject.remove("type")
@@ -298,7 +312,29 @@ class GoogleApiClient(
         return JsonObject().apply {
             put("role", if (role == Role.Assistant) "model" else "user")
             put("parts", JsonArray().apply {
-                add(JsonObject().put("text", content))
+                if (role == Role.Tool) {
+                    add(JsonObject().apply {
+                        put("functionResponse", JsonObject().apply {
+                            put("name", toolCallId!!.id)
+                            put("response", JsonObject().apply {
+                                //todo: tool response should have valid json
+                                put("result", (messageContent as TextContent).content)
+                            })
+                        })
+                    })
+                } else {
+                    if (toolCalls != null) {
+                        (toolCalls as List<ToolCall>).forEach {
+                            val functionCall = it as ToolCall.Function
+                            add(JsonObject().put("functionCall", JsonObject().apply {
+                                put("name", functionCall.function.name)
+                                put("args", JsonObject(functionCall.function.argumentsOrNull))
+                            }))
+                        }
+                    } else {
+                        add(JsonObject().put("text", content))
+                    }
+                }
             })
         }
     }

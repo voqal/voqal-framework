@@ -306,7 +306,7 @@ class SharedAudioCapture(private val project: Project) {
                     }
                     if (audioDetection.speechDetected.get()) {
                         if (audioDetection.framesBeforeVoiceDetected.isNotEmpty()) {
-                            log.debug { "Developer started talking. Frame: ${audioData.index}" }
+                            log.info { "Talking started. Frame: ${audioData.index}" }
                             speechDetected = true
                             audioDetection.framesBeforeVoiceDetected.forEach {
                                 capturedVoice.add(it)
@@ -315,7 +315,7 @@ class SharedAudioCapture(private val project: Project) {
                         }
                         capturedVoice.add(audioData)
                     } else if (speechDetected && !audioDetection.speechDetected.get()) {
-                        log.debug { "Developer stopped talking. Frame: ${audioData.index}" }
+                        log.info { "Talking stopped. Frame: ${audioData.index}" }
                         capturedVoice.add(audioData)
 
                         //ensure captured voice has no skipped frames
@@ -364,8 +364,9 @@ class SharedAudioCapture(private val project: Project) {
                             } else {
                                 "invalid duration"
                             }
-                            project.service<ChatToolWindowContentManager>()
-                                .addUserMessage("Audio input: $audioLengthFormat", speechId)
+                            log.info { "Audio input: $audioLengthFormat" }
+//                            project.service<ChatToolWindowContentManager>()
+//                                .addUserMessage("Audio input: $audioLengthFormat", speechId)
 
                             directiveService.handleTranscription(
                                 SpokenTranscript("", speechId),

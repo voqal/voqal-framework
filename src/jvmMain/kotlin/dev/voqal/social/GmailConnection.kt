@@ -17,6 +17,7 @@ import dev.voqal.services.getVoqalLogger
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import java.io.ByteArrayOutputStream
+import java.time.Instant
 import java.util.*
 import javax.mail.Session
 import javax.mail.internet.InternetAddress
@@ -37,9 +38,9 @@ class GmailConnection(project: Project, var accessToken: String) {
     private val service = Gmail.Builder(HTTP_TRANSPORT, JSON_FACTORY, requestInitializer).build()
     private val log = project.getVoqalLogger(this::class)
 
-    fun getUnreadEmails(maxResults: Long = 50): JsonArray {//todo: exclude emails with drafts
+    fun getUnreadEmails(maxResults: Long = 50, afterTime: Instant? = null): JsonArray {
         log.trace { "Fetching unread emails" }
-        val query = "is:unread in:inbox"
+        val query = "is:unread in:inbox" + (afterTime?.let { " after:${it.epochSecond}" } ?: "")
         val messagesResponse = service.users().messages()
             .list("me")
             .setQ(query)

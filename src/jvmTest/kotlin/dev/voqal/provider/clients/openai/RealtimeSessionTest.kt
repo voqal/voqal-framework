@@ -9,6 +9,7 @@ import dev.voqal.assistant.tool.VoqalTool
 import dev.voqal.core.MockChatToolWindowContentManager
 import dev.voqal.core.MockProject
 import dev.voqal.core.MockToolService
+import dev.voqal.services.ChatToolWindowContentManager
 import io.ktor.server.application.*
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
@@ -80,6 +81,10 @@ class RealtimeSessionTest : VoqalTest {
                         assertEquals(":2j", inputs.getJsonObject(2).getString("email_id"))
                         assertEquals(":2x", inputs.getJsonObject(3).getString("email_id"))
                     }
+                }
+
+                override fun getConversation(): List<ChatToolWindowContentManager.ChatMessage> {
+                    TODO("Not yet implemented")
                 }
             }
 
@@ -187,6 +192,10 @@ class RealtimeSessionTest : VoqalTest {
                             testContext.completeNow()
                         }
                     }
+                }
+
+                override fun getConversation(): List<ChatToolWindowContentManager.ChatMessage> {
+                    TODO("Not yet implemented")
                 }
             }
 
@@ -308,6 +317,10 @@ class RealtimeSessionTest : VoqalTest {
                         assertEquals("Yes, I can hear you. How can I assist you?", transcript)
                     }
                     testContext.completeNow()
+                }
+
+                override fun getConversation(): List<ChatToolWindowContentManager.ChatMessage> {
+                    TODO("Not yet implemented")
                 }
             }
 

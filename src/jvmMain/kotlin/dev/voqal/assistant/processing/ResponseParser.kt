@@ -56,6 +56,31 @@ object ResponseParser {
         }
         val codeBlock = CodeExtractor.extractCodeBlock(textContent, false)
 
+        //todo: remove
+        try {
+            val json = JsonObject(codeBlock)
+            if (json.getBoolean("cancel") == true && json.fieldNames().size == 1) {
+                return VoqalResponse(
+                    directive, listOf(
+                        ToolCall.Function(
+                            id = ToolId("cancel"),
+                            function = FunctionCall(nameOrNull = "cancel", argumentsOrNull = "{}")
+                        )
+                    ), completion
+                )
+            } else if (json.getBoolean("accept") == true && json.fieldNames().size == 1) {
+                return VoqalResponse(
+                    directive, listOf(
+                        ToolCall.Function(
+                            id = ToolId("looks_good"),
+                            function = FunctionCall(nameOrNull = "looks_good", argumentsOrNull = "{}")
+                        )
+                    ), completion
+                )
+            }
+        } catch (_: Exception) {
+        }
+
         return VoqalResponse(
             directive, listOf(
                 ToolCall.Function(

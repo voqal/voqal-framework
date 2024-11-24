@@ -97,10 +97,10 @@ kotlin {
                 implementation("org.junit.jupiter:junit-jupiter-api:5.11.3")
                 runtimeOnly("org.junit.jupiter:junit-jupiter-engine:5.11.3")
                 implementation(libs.mockito.kotlin)
-                implementation("io.ktor:ktor-server-websockets:2.3.12")
-                implementation("io.ktor:ktor-server-netty:2.3.12")
+                implementation("io.ktor:ktor-server-websockets:2.3.13")
+                implementation("io.ktor:ktor-server-netty:2.3.13")
 
-                implementation("io.ktor:ktor-client-java:2.3.12")
+                implementation("io.ktor:ktor-client-java:2.3.13")
                 implementation(libs.ktor.client.content.negotiation)
                 implementation(libs.ktor.client.java.jvm)
                 implementation(libs.ktor.serialization.kotlinx.json)

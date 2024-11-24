@@ -6,7 +6,7 @@ import io.vertx.core.json.JsonObject
 data class WakeSettings(
     val provider: WProvider = WProvider.NONE,
     val providerKey: String = "",
-    val wakeWord: String = "Voqal",
+    val wakeWord: String = WakeWord.Computer.name,
     val customWakeWordFile: String = "",
     val wakeMode: WakeMode = WakeMode.VOICE_ACTIVITY
 ) : ConfigurableSettings {
@@ -17,7 +17,7 @@ data class WakeSettings(
     constructor(json: JsonObject) : this(
         provider = WProvider.lenientValueOf(json.getString("provider") ?: WProvider.NONE.name),
         providerKey = json.getString("providerKey", ""),
-        wakeWord = json.getString("wakeWord", WakeWord.Voqal.name),
+        wakeWord = json.getString("wakeWord", WakeWord.Computer.name),
         customWakeWordFile = json.getString("customWakeWordFile", ""),
         wakeMode = WakeMode.lenientValueOf(json.getString("wakeMode", WakeMode.VOICE_ACTIVITY.name))
     )

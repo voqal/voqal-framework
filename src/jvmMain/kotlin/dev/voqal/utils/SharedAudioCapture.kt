@@ -5,6 +5,7 @@ import com.intellij.openapi.project.Project
 import dev.voqal.assistant.focus.SpokenTranscript
 import dev.voqal.config.settings.MicrophoneSettings.WakeMode
 import dev.voqal.config.settings.VoiceDetectionSettings.VoiceDetectionProvider
+import dev.voqal.config.settings.WakeSettings.WProvider
 import dev.voqal.provider.AiProvider
 import dev.voqal.provider.VadProvider
 import dev.voqal.provider.WakeProvider
@@ -355,9 +356,12 @@ class SharedAudioCapture(private val project: Project) {
                         if (testMode) {
                             wakeWordDetected = false
                             continue //skip process test audio to transcript (currently no test mode STT)
-                        } else if (!wakeWordDetected && config.microphoneSettings.wakeMode == WakeMode.WAKE_WORD) {
-                            log.debug { "No wake word detected" }
-                            continue
+                        } else if (!wakeWordDetected) {
+                            val wakeProvider = config.wakeSettings.provider
+                            if (wakeProvider != WProvider.NONE && config.microphoneSettings.wakeMode == WakeMode.WAKE_WORD) {
+                                log.debug { "No wake word detected" }
+                                continue
+                            }
                         }
                         wakeWordDetected = false
 

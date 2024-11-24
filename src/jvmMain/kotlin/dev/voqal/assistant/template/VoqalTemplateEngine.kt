@@ -20,6 +20,7 @@ class VoqalTemplateEngine {
                 )
                 .autoEscaping(false)
                 .loader(StringLoader())
+                .extension(WithLineNumbersExtension())
                 .extension(AddUserContextExtension())
                 .extension(GetUserContextExtension())
                 .extension(SlurpUrlExtension())

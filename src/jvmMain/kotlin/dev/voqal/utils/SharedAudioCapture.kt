@@ -76,7 +76,6 @@ class SharedAudioCapture(private val project: Project) {
     private var microphoneName: String = ""
     private var line: SharedAudioLine? = null
     private val modeProviders = mutableMapOf<String, AiProvider>()
-    private var currentMode: String = "Idle Mode"
 
     data class AudioDetection(
         val wakeWordDetected: AtomicBoolean = AtomicBoolean(false),
@@ -126,12 +125,6 @@ class SharedAudioCapture(private val project: Project) {
             } else if (it == VoqalStatus.DISABLED) {
                 enabled = false
                 cancel()
-            }
-
-            if (it == VoqalStatus.EDITING) {
-                currentMode = "Edit Mode"
-            } else {
-                currentMode = "Idle Mode"
             }
         }
 
@@ -273,13 +266,12 @@ class SharedAudioCapture(private val project: Project) {
                     modeProviders[it.promptName] = provider
                 }
             }
-            currentMode = configService.getActivePromptName()
 
             val processJob = CoroutineScope(Dispatchers.Default).launch {
                 while (active) {
                     val audioData = audioQueue.take()
                     val liveDataListeners = listeners.filter { it.isLiveDataListener() }
-                    val modeProvider = modeProviders[currentMode]
+                    val modeProvider = modeProviders[configService.getActivePromptName()]
                     if (!testMode && paused) continue
 
                     for (listener in liveDataListeners) {

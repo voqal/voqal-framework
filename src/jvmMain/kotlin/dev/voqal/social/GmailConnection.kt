@@ -52,7 +52,9 @@ class GmailConnection(project: Project, var accessToken: String) {
             log.trace { "No unread messages found" }
             return JsonArray()
         }
-        log.debug { "Found ${messages.size} (max=$maxResults) unread messages" }
+        log.debug {
+            "Found ${messages.size} (max=$maxResults) unread messages" + (afterTime?.let { " (after=$it)" } ?: "")
+        }
 
         val unreadEmails = JsonArray()
         for (message in messages) {

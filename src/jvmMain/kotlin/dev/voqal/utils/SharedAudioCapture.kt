@@ -320,6 +320,7 @@ class SharedAudioCapture(private val project: Project) {
                             speechDetected = false
                             audioDetection.framesBeforeVoiceDetected.clear()
                             capturedVoice.clear()
+                            //todo: active speech should keep line open, no speech should trigger close
                         }
 
                         project.scope.launch {

@@ -7,7 +7,8 @@ data class WakeSettings(
     val provider: WProvider = WProvider.NONE,
     val providerKey: String = "",
     val wakeWord: String = "Voqal",
-    val customWakeWordFile: String = ""
+    val customWakeWordFile: String = "",
+    val wakeMode: WakeMode = WakeMode.VOICE_ACTIVITY
 ) : ConfigurableSettings {
 
     /**
@@ -17,7 +18,8 @@ data class WakeSettings(
         provider = WProvider.lenientValueOf(json.getString("provider") ?: WProvider.NONE.name),
         providerKey = json.getString("providerKey", ""),
         wakeWord = json.getString("wakeWord", WakeWord.Voqal.name),
-        customWakeWordFile = json.getString("customWakeWordFile", "")
+        customWakeWordFile = json.getString("customWakeWordFile", ""),
+        wakeMode = WakeMode.lenientValueOf(json.getString("wakeMode", WakeMode.VOICE_ACTIVITY.name))
     )
 
     override fun toJson(): JsonObject {
@@ -26,6 +28,7 @@ data class WakeSettings(
             put("providerKey", providerKey)
             put("wakeWord", wakeWord)
             put("customWakeWordFile", customWakeWordFile)
+            put("wakeMode", wakeMode.name)
         }
     }
 
@@ -79,6 +82,18 @@ data class WakeSettings(
                 } catch (e: IllegalArgumentException) {
                     null
                 }
+            }
+        }
+    }
+
+    enum class WakeMode(val displayName: String) {
+        VOICE_ACTIVITY("Voice Activity"),
+        WAKE_WORD("Wake Word");
+
+        companion object {
+            @JvmStatic
+            fun lenientValueOf(str: String): WakeMode {
+                return WakeMode.valueOf(str.uppercase().replace(" ", "_"))
             }
         }
     }

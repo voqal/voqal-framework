@@ -35,7 +35,8 @@ class GmailConnection(project: Project, var accessToken: String) {
             authorization = "Bearer $accessToken"
         }
     }
-    private val service = Gmail.Builder(HTTP_TRANSPORT, JSON_FACTORY, requestInitializer).build()
+    private val service = Gmail.Builder(HTTP_TRANSPORT, JSON_FACTORY, requestInitializer)
+        .setApplicationName("Voqal").build()
     private val log = project.getVoqalLogger(this::class)
 
     fun getUnreadEmails(maxResults: Long = 50, afterTime: Instant? = null): JsonArray {

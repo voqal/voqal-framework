@@ -75,7 +75,9 @@ class PicovoiceCobraClient(
     override fun onAudioData(data: ByteArray, detection: SharedAudioCapture.AudioDetection) {
         val pcm = convertBytesToShorts(data)
         val isVoicedRef = FloatByReference()
-        native.pv_cobra_process(cobra, pcm, isVoicedRef)
+        val status = native.pv_cobra_process(cobra, pcm, isVoicedRef)
+        PicovoiceNative.throwIfError(log, native, status)
+
         voiceProbability = isVoicedRef.value * 100.00
         if (voiceProbability >= voiceDetectionThreshold) {
             handleVoiceDetected()

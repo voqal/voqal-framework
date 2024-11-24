@@ -1,4 +1,4 @@
-package dev.voqal.provider.clients.voqal
+package dev.voqal.provider.clients.webrtc
 
 import com.intellij.openapi.project.Project
 import dev.voqal.provider.VadProvider
@@ -8,7 +8,7 @@ import dev.voqal.utils.SharedAudioCapture
 import dev.voqal.utils.SharedAudioCapture.Companion.convertBytesToShorts
 import io.github.givimad.libfvadjni.VoiceActivityDetector
 
-class VoqalVadClient(
+class WebRtcVadClient(
     private val project: Project,
     sensitivity: Int,
     override var voiceSilenceThreshold: Long,

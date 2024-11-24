@@ -48,7 +48,8 @@ data class VoiceDetectionSettings(
     enum class VoiceDetectionProvider(val displayName: String) {
         NONE("None"),
         PICOVOICE("Picovoice"),
-        VOQAL("Voqal (Community)");
+        SILERO("Silero"),
+        WEBRTC("WebRTC");
 
         fun isKeyRequired(): Boolean {
             return this in setOf(PICOVOICE)

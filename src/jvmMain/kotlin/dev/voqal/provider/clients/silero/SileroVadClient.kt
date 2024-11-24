@@ -33,6 +33,7 @@ class SileroVadClient(
         val installDir = NativesExtractor.workingDirectory.parentFile
         val sileroVadFile = File(installDir, "silero_vad.onnx")
         if (!sileroVadFile.exists()) {
+            log.debug { "Extracting silero_vad.onnx" }
             Resources.getResource(SileroVadClient::class.java, "/silero_vad.onnx").openStream().use { input ->
                 BufferedOutputStream(sileroVadFile.outputStream()).use { output ->
                     input.copyTo(output)
@@ -41,6 +42,7 @@ class SileroVadClient(
             if (!sileroVadFile.exists()) {
                 throw IllegalStateException("Failed to extract silero_vad.onnx")
             }
+            log.debug { "Extracted silero_vad.onnx to ${sileroVadFile.absolutePath}" }
         }
 
         vadDetector = SlieroVadDetector(
@@ -53,6 +55,7 @@ class SileroVadClient(
         )
 
         project.audioCapture.registerListener(this)
+        log.debug { "SileroVadClient initialized" }
     }
 
     override fun onAudioData(data: ByteArray, detection: SharedAudioCapture.AudioDetection) {

@@ -18,4 +18,8 @@ open class MockChatToolWindowContentManager : ChatToolWindowContentManager {
         it: Any?
     ) {
     }
+
+    override fun getConversation(): List<ChatToolWindowContentManager.ChatMessage> {
+        TODO("Not yet implemented")
+    }
 }

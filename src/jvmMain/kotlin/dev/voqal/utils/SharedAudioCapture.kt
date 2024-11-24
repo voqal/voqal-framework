@@ -357,9 +357,9 @@ class SharedAudioCapture(private val project: Project) {
                             continue //skip process test audio to transcript (currently no test mode STT)
                         } else if (!wakeWordDetected && config.microphoneSettings.wakeMode == WakeMode.WAKE_WORD) {
                             log.debug { "No wake word detected" }
-                            wakeWordDetected = false
                             continue
                         }
+                        wakeWordDetected = false
 
                         val audioLengthMs = (mergedAudio.size.toDouble() / FORMAT.frameSize) * 1000.0 / SAMPLE_RATE
                         log.debug { "Speech audio length: ${audioLengthMs}ms" }

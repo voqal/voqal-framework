@@ -17,7 +17,7 @@ import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
 import io.ktor.utils.io.CancellationException
 import io.ktor.websocket.*
-import io.pebbletemplates.pebble.error.ParserException
+import io.pebbletemplates.pebble.error.PebbleException
 import io.vertx.core.Promise
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
@@ -112,10 +112,10 @@ class RealtimeSession(
                 while (!disposed) {
                     try {
                         updateSession()
-                    } catch (e: ParserException) {
+                    } catch (e: PebbleException) {
                         log.warn("Failed to update session: ${e.message}")
                     } catch (e: Throwable) {
-                        log.warn("Failed to update session", e)
+                        log.error("Failed to update session", e)
                     }
                     delay(500)
                 }

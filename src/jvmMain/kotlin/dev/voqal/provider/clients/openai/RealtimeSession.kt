@@ -365,16 +365,8 @@ class RealtimeSession(
         }
 
         if (detection.speechDetected.get()) {
-            println("todo")
-//            if (playingResponseId != null) {
-//                log.warn("Sending response cancel")
-//                stopCurrentVoice()
-//                runBlocking {
-//                    session.send(Frame.Text(JsonObject().apply {
-//                        put("type", "response.cancel")
-//                    }.toString()))
-//                }
-//            }
+            stopCurrentVoice()
+            //todo: response.cancel
 
             capturing = true
             detection.framesBeforeVoiceDetected.forEach {

@@ -3,9 +3,11 @@ package dev.voqal.utils
 import com.aallam.openai.api.exception.OpenAIException
 import com.intellij.openapi.project.Project
 import dev.voqal.assistant.focus.SpokenTranscript
+import dev.voqal.config.settings.MicrophoneSettings.WakeMode
 import dev.voqal.config.settings.VoiceDetectionSettings.VoiceDetectionProvider
 import dev.voqal.provider.AiProvider
 import dev.voqal.provider.VadProvider
+import dev.voqal.provider.WakeProvider
 import dev.voqal.services.*
 import dev.voqal.status.VoqalStatus
 import dev.voqal.utils.SharedAudioCapture.AudioDetection.Companion.PRE_SPEECH_BUFFER_SIZE
@@ -76,6 +78,7 @@ class SharedAudioCapture(private val project: Project) {
     private var currentMode: String = "Idle Mode"
 
     data class AudioDetection(
+        val wakeWordDetected: AtomicBoolean = AtomicBoolean(false),
         val voiceCaptured: AtomicBoolean = AtomicBoolean(false),
         val voiceDetected: AtomicBoolean = AtomicBoolean(false),
         val speechDetected: AtomicBoolean = AtomicBoolean(false),
@@ -254,6 +257,7 @@ class SharedAudioCapture(private val project: Project) {
                 }
             }
 
+            var wakeWordDetected = false
             var voiceCaptured = false
             var speechDetected = false
             var readyForMicrophoneAudio = false
@@ -281,7 +285,7 @@ class SharedAudioCapture(private val project: Project) {
                         val updateListener = (testMode && listener.isTestListener()) ||
                                 (!testMode && !listener.isTestListener())
                         if (updateListener) {
-                            if (listener !is VadProvider && listener !== modeProvider) {
+                            if ((listener !is VadProvider && listener !is WakeProvider) && listener !== modeProvider) {
                                 continue //ignore audio, mode provider is handling
                             }
 
@@ -304,7 +308,11 @@ class SharedAudioCapture(private val project: Project) {
                         log.debug { "Insufficient voice captured. Frame: ${audioData.index}" }
                         voiceCaptured = false
                     }
-                    if (audioDetection.speechDetected.get()) {
+                    if (audioDetection.wakeWordDetected.get()) {
+                        log.info { "Wake word detected. Frame: ${audioData.index}" }
+                        wakeWordDetected = true
+                        audioDetection.wakeWordDetected.set(false)
+                    } else if (audioDetection.speechDetected.get()) {
                         if (audioDetection.framesBeforeVoiceDetected.isNotEmpty()) {
                             log.info { "Talking started. Frame: ${audioData.index}" }
                             speechDetected = true
@@ -337,14 +345,21 @@ class SharedAudioCapture(private val project: Project) {
                         capturedVoice.clear()
                         speechDetected = false
                         voiceCaptured = false
+
+                        val config = configService.getConfig()
                         if (testMode) {
+                            wakeWordDetected = false
                             continue //skip process test audio to transcript (currently no test mode STT)
+                        } else if (!wakeWordDetected && config.microphoneSettings.wakeMode == WakeMode.WAKE_WORD) {
+                            log.debug { "No wake word detected" }
+                            wakeWordDetected = false
+                            continue
                         }
 
                         val audioLengthMs = (mergedAudio.size.toDouble() / FORMAT.frameSize) * 1000.0 / SAMPLE_RATE
                         log.debug { "Speech audio length: ${audioLengthMs}ms" }
 
-                        val speechDir = File(configService.getConfig().speechToTextSettings.speechDir)
+                        val speechDir = File(config.speechToTextSettings.speechDir)
                         speechDir.mkdirs()
                         val speechId = aiProvider.asVadProvider().speechId
                         val speechFile = File(speechDir, "developer-$speechId.wav")
@@ -378,7 +393,7 @@ class SharedAudioCapture(private val project: Project) {
                                 continue //already sent data
                             }
 
-                            val sttModelName = configService.getConfig().speechToTextSettings.modelName
+                            val sttModelName = config.speechToTextSettings.modelName
                             try {
                                 val transcript = sttProvider.transcribe(speechFile, sttModelName)
                                 val spokenTranscript = SpokenTranscript(transcript, speechId, isFinal = true)

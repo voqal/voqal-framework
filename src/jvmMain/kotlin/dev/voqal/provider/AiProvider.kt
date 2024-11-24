@@ -9,6 +9,11 @@ interface AiProvider : Disposable {
     fun isVadProvider(): Boolean = false
     fun asVadProvider(): VadProvider = this as VadProvider
 
+    fun isWakeProvider(): Boolean = false
+    fun asWakeProvider(): WakeProvider {
+        return this as WakeProvider
+    }
+
     fun isLlmProvider(): Boolean = false
     fun asLlmProvider(): LlmProvider = this as LlmProvider
 

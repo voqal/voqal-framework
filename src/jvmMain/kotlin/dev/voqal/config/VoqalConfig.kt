@@ -5,6 +5,7 @@ import io.vertx.core.json.JsonObject
 
 open class VoqalConfig(
     val microphoneSettings: MicrophoneSettings = MicrophoneSettings(),
+    val wakeSettings: WakeSettings = WakeSettings(),
     val voiceDetectionSettings: VoiceDetectionSettings = VoiceDetectionSettings(),
     val speechToTextSettings: SpeechToTextSettings = SpeechToTextSettings(),
     val languageModelsSettings: LanguageModelsSettings = LanguageModelsSettings(),
@@ -20,6 +21,9 @@ open class VoqalConfig(
         microphoneSettings = json.getJsonObject("microphoneSettings")?.let {
             MicrophoneSettings(it)
         } ?: MicrophoneSettings(),
+        wakeSettings = json.getJsonObject("wakeSettings")?.let {
+            WakeSettings(it)
+        } ?: WakeSettings(),
         voiceDetectionSettings = json.getJsonObject("voiceDetectionSettings")?.let {
             VoiceDetectionSettings(it)
         } ?: VoiceDetectionSettings(),
@@ -43,6 +47,7 @@ open class VoqalConfig(
     override fun toJson(): JsonObject {
         return JsonObject().apply {
             put("microphoneSettings", microphoneSettings.toJson())
+            put("wakeSettings", wakeSettings.toJson())
             put("voiceDetectionSettings", voiceDetectionSettings.toJson())
             put("speechToTextSettings", speechToTextSettings.toJson())
             put("languageModelsSettings", languageModelsSettings.toJson())
@@ -55,6 +60,7 @@ open class VoqalConfig(
     override fun withKeysRemoved(): VoqalConfig {
         return VoqalConfig(
             microphoneSettings = microphoneSettings.withKeysRemoved(),
+            wakeSettings = wakeSettings.withKeysRemoved(),
             voiceDetectionSettings = voiceDetectionSettings.withKeysRemoved(),
             speechToTextSettings = speechToTextSettings.withKeysRemoved(),
             languageModelsSettings = languageModelsSettings.withKeysRemoved(),
@@ -67,6 +73,7 @@ open class VoqalConfig(
     override fun withPiiRemoved(): ConfigurableSettings {
         return VoqalConfig(
             microphoneSettings = microphoneSettings.withPiiRemoved(),
+            wakeSettings = wakeSettings.withPiiRemoved(),
             voiceDetectionSettings = voiceDetectionSettings.withPiiRemoved(),
             speechToTextSettings = speechToTextSettings.withPiiRemoved(),
             languageModelsSettings = languageModelsSettings.withPiiRemoved(),
@@ -78,6 +85,7 @@ open class VoqalConfig(
 
     open fun copy(
         microphoneSettings: MicrophoneSettings = this.microphoneSettings,
+        wakeSettings: WakeSettings = this.wakeSettings,
         voiceDetectionSettings: VoiceDetectionSettings = this.voiceDetectionSettings,
         speechToTextSettings: SpeechToTextSettings = this.speechToTextSettings,
         languageModelsSettings: LanguageModelsSettings = this.languageModelsSettings,
@@ -87,6 +95,7 @@ open class VoqalConfig(
     ): VoqalConfig {
         return VoqalConfig(
             microphoneSettings = microphoneSettings,
+            wakeSettings = wakeSettings,
             voiceDetectionSettings = voiceDetectionSettings,
             speechToTextSettings = speechToTextSettings,
             languageModelsSettings = languageModelsSettings,

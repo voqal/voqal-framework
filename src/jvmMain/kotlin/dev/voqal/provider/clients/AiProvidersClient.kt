@@ -8,6 +8,7 @@ import dev.voqal.services.service
 
 class AiProvidersClient(private val project: Project) : AiProvider {
 
+    private val wakeProviders = mutableListOf<WakeProvider>()
     private val vadProviders = mutableListOf<VadProvider>()
     private val llmProviders = mutableListOf<LlmProvider>()
     private val sttProviders = mutableListOf<SttProvider>()
@@ -15,6 +16,11 @@ class AiProvidersClient(private val project: Project) : AiProvider {
     private val assistantProviders = mutableListOf<AssistantProvider>()
     private val observabilityProviders = mutableListOf<ObservabilityProvider>()
     private val stmProviders = mutableListOf<StmProvider>()
+
+    fun addWakeProvider(provider: WakeProvider) {
+        wakeProviders.add(provider)
+        Disposer.register(this, provider)
+    }
 
     fun addVadProvider(provider: VadProvider) {
         vadProviders.add(provider)
@@ -49,6 +55,14 @@ class AiProvidersClient(private val project: Project) : AiProvider {
     fun addStmProvider(provider: StmProvider) {
         stmProviders.add(provider)
         Disposer.register(this, provider)
+    }
+
+    override fun isWakeProvider(): Boolean {
+        return wakeProviders.any { it.isWakeProvider() }
+    }
+
+    override fun asWakeProvider(): WakeProvider {
+        return wakeProviders.first { it.isWakeProvider() }.asWakeProvider()
     }
 
     override fun isVadProvider(): Boolean {

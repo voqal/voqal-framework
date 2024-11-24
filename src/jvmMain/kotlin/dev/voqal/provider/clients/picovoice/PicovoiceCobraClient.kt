@@ -89,5 +89,6 @@ class PicovoiceCobraClient(
 
     override fun dispose() {
         project.audioCapture.removeListener(this)
+        native.pv_cobra_delete(cobra)
     }
 }

@@ -300,10 +300,11 @@ class SharedAudioCapture(private val project: Project) {
                         }
                     }
 
+                    val config = configService.getConfig()
                     if (!voiceCaptured && audioDetection.voiceCaptured.get()) {
                         log.debug { "Voice captured. Frame: ${audioData.index}" }
                         voiceCaptured = true
-                    } else if (!speechDetected && voiceCaptured &&
+                    } else if (!wakeWordDetected && !speechDetected && voiceCaptured &&
                         !audioDetection.voiceCaptured.get() && !audioDetection.voiceDetected.get()
                     ) {
                         log.debug { "Insufficient voice captured. Frame: ${audioData.index}" }
@@ -313,6 +314,13 @@ class SharedAudioCapture(private val project: Project) {
                         log.info { "Wake word detected. Frame: ${audioData.index}" }
                         wakeWordDetected = true
                         audioDetection.wakeWordDetected.set(false)
+
+                        val wakeProvider = config.wakeSettings.provider
+                        if (wakeProvider != WProvider.NONE && config.microphoneSettings.wakeMode == WakeMode.WAKE_WORD) {
+                            speechDetected = false
+                            audioDetection.framesBeforeVoiceDetected.clear()
+                            capturedVoice.clear()
+                        }
 
                         project.scope.launch {
                             val directiveService = project.service<VoqalDirectiveService>()
@@ -352,7 +360,6 @@ class SharedAudioCapture(private val project: Project) {
                         speechDetected = false
                         voiceCaptured = false
 
-                        val config = configService.getConfig()
                         if (testMode) {
                             wakeWordDetected = false
                             continue //skip process test audio to transcript (currently no test mode STT)

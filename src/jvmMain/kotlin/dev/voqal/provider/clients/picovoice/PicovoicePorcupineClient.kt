@@ -29,6 +29,7 @@ class PicovoicePorcupineClient(
     private val porcupine: Pointer
 
     init {
+        NativesExtractor.extractNatives(project)
         val config = project.service<VoqalConfigService>().getConfig()
         val wakeWord = config.wakeSettings.wakeWord
         val keywordFile = if (wakeWord == WakeSettings.WakeWord.CustomFile.name) {

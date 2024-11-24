@@ -5,6 +5,7 @@ import com.intellij.openapi.project.Project
 import com.sun.jna.Pointer
 import com.sun.jna.ptr.IntByReference
 import com.sun.jna.ptr.PointerByReference
+import dev.voqal.config.VoqalConfig
 import dev.voqal.config.settings.WakeSettings
 import dev.voqal.provider.WakeProvider
 import dev.voqal.provider.clients.picovoice.NativesExtractor.workingDirectory
@@ -25,12 +26,28 @@ class PicovoicePorcupineClient(
 ) : WakeProvider, SharedAudioCapture.AudioDataListener {
 
     private val log = project.getVoqalLogger(this::class)
-    private val native: PorcupineNative
-    private val porcupine: Pointer
+    private lateinit var native: PorcupineNative
+    private lateinit var porcupine: Pointer
 
     init {
         NativesExtractor.extractNatives(project)
-        val config = project.service<VoqalConfigService>().getConfig()
+
+        val configService = project.service<VoqalConfigService>()
+        val config = configService.getConfig()
+        var loadedWakeWord = config.wakeSettings.wakeWord
+        loadWakeWordDetector(config, picovoiceKey, sensitivity)
+        configService.onConfigChange(this) {
+            if (loadedWakeWord != it.wakeSettings.wakeWord) {
+                loadedWakeWord = it.wakeSettings.wakeWord
+                loadWakeWordDetector(it, picovoiceKey, sensitivity)
+                log.info { "Wake word changed to ${it.wakeSettings.wakeWord}" }
+            }
+        }
+
+        project.audioCapture.registerListener(this)
+    }
+
+    private fun loadWakeWordDetector(config: VoqalConfig, picovoiceKey: String, sensitivity: Float) {
         val wakeWord = config.wakeSettings.wakeWord
         val keywordFile = if (wakeWord == WakeSettings.WakeWord.CustomFile.name) {
             File(config.wakeSettings.customWakeWordFile)
@@ -75,8 +92,11 @@ class PicovoicePorcupineClient(
             workingDirectory,
             "pvporcupine/lib/common/porcupine_params.pv".replace("/", File.separator)
         )
-        native = PorcupineNative.getINSTANCE(pvporcupineLibraryPath)
-        log.debug { "Porcupine version: " + native.pv_porcupine_version() }
+
+        if (!this::native.isInitialized) {
+            native = PorcupineNative.getINSTANCE(pvporcupineLibraryPath)
+            log.debug { "Porcupine version: " + native.pv_porcupine_version() }
+        }
 
         val porcupineRef = PointerByReference()
         val status = native.pv_porcupine_init(
@@ -88,9 +108,11 @@ class PicovoicePorcupineClient(
             porcupineRef
         )
         PicovoiceNative.throwIfError(log, native, status)
-        porcupine = porcupineRef.value
 
-        project.audioCapture.registerListener(this)
+        if (this::porcupine.isInitialized) {
+            native.pv_porcupine_delete(porcupine)
+        }
+        porcupine = porcupineRef.value
     }
 
     override fun onAudioData(data: ByteArray, detection: SharedAudioCapture.AudioDetection) {

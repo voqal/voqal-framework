@@ -312,6 +312,11 @@ class SharedAudioCapture(private val project: Project) {
                         log.info { "Wake word detected. Frame: ${audioData.index}" }
                         wakeWordDetected = true
                         audioDetection.wakeWordDetected.set(false)
+
+                        project.scope.launch {
+                            val directiveService = project.service<VoqalDirectiveService>()
+                            directiveService.wakeWordDetected()
+                        }
                     } else if (audioDetection.speechDetected.get()) {
                         if (audioDetection.framesBeforeVoiceDetected.isNotEmpty()) {
                             log.info { "Talking started. Frame: ${audioData.index}" }

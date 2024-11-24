@@ -69,4 +69,6 @@ interface VoqalDirectiveService {
         isTextOnly: Boolean = false,
         response: VoqalResponse? = null
     )
+
+    fun wakeWordDetected() = Unit
 }

@@ -4,7 +4,7 @@ import dev.voqal.config.ConfigurableSettings
 import io.vertx.core.json.JsonObject
 
 data class WakeSettings(
-    val provider: WakeProvider = WakeProvider.NONE,
+    val provider: WProvider = WProvider.NONE,
     val providerKey: String = "",
     val wakeWord: String = "Voqal",
     val customWakeWordFile: String = ""
@@ -14,7 +14,7 @@ data class WakeSettings(
      * Need to set defaults so config changes don't reset stored config due to parse error.
      */
     constructor(json: JsonObject) : this(
-        provider = WakeProvider.lenientValueOf(json.getString("provider") ?: WakeProvider.NONE.name),
+        provider = WProvider.lenientValueOf(json.getString("provider") ?: WProvider.NONE.name),
         providerKey = json.getString("providerKey", ""),
         wakeWord = json.getString("wakeWord", WakeWord.Voqal.name),
         customWakeWordFile = json.getString("customWakeWordFile", "")
@@ -37,7 +37,7 @@ data class WakeSettings(
         return withKeysRemoved().copy(customWakeWordFile = if (customWakeWordFile.isEmpty()) "" else "***")
     }
 
-    enum class WakeProvider(val displayName: String) {
+    enum class WProvider(val displayName: String) {
         NONE("None"),
         PICOVOICE("Picovoice");
 
@@ -51,8 +51,8 @@ data class WakeSettings(
 
         companion object {
             @JvmStatic
-            fun lenientValueOf(str: String): WakeProvider {
-                return WakeProvider.valueOf(str)
+            fun lenientValueOf(str: String): WProvider {
+                return WProvider.valueOf(str)
             }
         }
     }

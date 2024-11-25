@@ -58,7 +58,7 @@ kotlin {
                 implementation("com.google.oauth-client:google-oauth-client-jetty:1.36.0")
                 implementation("com.google.apis:google-api-services-gmail:v1-rev20220404-2.0.0")
                 implementation("javax.mail:mail:1.4.7")
-                implementation("com.microsoft.onnxruntime:onnxruntime:1.16.0-rc1")
+                implementation("com.microsoft.onnxruntime:onnxruntime:1.20.0")
 
                 compileOnly("com.jetbrains.intellij.platform:code-style:242.23726.103") {
                     isTransitive = false

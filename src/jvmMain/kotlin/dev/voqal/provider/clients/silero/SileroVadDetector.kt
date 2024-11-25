@@ -6,7 +6,7 @@ import java.math.RoundingMode
 import kotlin.math.max
 
 //Source: https://github.com/snakers4/silero-vad
-class SlieroVadDetector(
+class SileroVadDetector(
     modelPath: String,
     startThreshold: Float,
     endThreshold: Float,
@@ -15,7 +15,7 @@ class SlieroVadDetector(
     speechPadMs: Int
 ) {
     // OnnxModel model used for speech processing
-    private val model: SlieroVadOnnxModel
+    private val model: SileroVadOnnxModel
 
     // Threshold for speech start
     private val startThreshold: Float
@@ -47,7 +47,7 @@ class SlieroVadDetector(
         require(!(samplingRate != 8000 && samplingRate != 16000)) { "does not support sampling rates other than [8000, 16000]" }
 
         // Initialize the parameters
-        this.model = SlieroVadOnnxModel(modelPath)
+        this.model = SileroVadOnnxModel(modelPath)
         this.startThreshold = startThreshold
         this.endThreshold = endThreshold
         this.samplingRate = samplingRate

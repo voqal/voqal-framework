@@ -7,7 +7,7 @@ import ai.onnxruntime.OrtSession
 import ai.onnxruntime.OrtSession.SessionOptions
 
 //Source: https://github.com/snakers4/silero-vad
-class SlieroVadOnnxModel(modelPath: String) {
+class SileroVadOnnxModel(modelPath: String) {
     // Define private variable OrtSession
     private val session: OrtSession
     private lateinit var h: Array<Array<FloatArray?>?>

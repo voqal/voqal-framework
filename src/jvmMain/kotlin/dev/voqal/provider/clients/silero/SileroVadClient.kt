@@ -27,7 +27,7 @@ class SileroVadClient(
     private val MIN_SILENCE_DURATION_MS = 600
     private val SPEECH_PAD_MS = 500
     private val log = project.getVoqalLogger(this::class)
-    private val vadDetector: SlieroVadDetector
+    private val vadDetector: SileroVadDetector
 
     init {
         val installDir = NativesExtractor.workingDirectory.parentFile
@@ -45,7 +45,7 @@ class SileroVadClient(
             log.debug { "Extracted silero_vad.onnx to ${sileroVadFile.absolutePath}" }
         }
 
-        vadDetector = SlieroVadDetector(
+        vadDetector = SileroVadDetector(
             sileroVadFile.absolutePath,
             START_THRESHOLD,
             END_THRESHOLD,

@@ -192,13 +192,10 @@ class RealtimeSession(
                 }
             }
         }
-        if (newSession.toString() == activeSession.toString()) {
-            return
-        } else {
-            log.debug { "Updating realtime session prompt" }
-        }
-        activeSession.mergeIn(newSession)
+        if (newSession.toString() == activeSession.toString()) return
 
+        log.trace { "Updating realtime session prompt" }
+        activeSession.mergeIn(newSession)
         val json = JsonObject().apply {
             put("type", "session.update")
             put("session", activeSession)

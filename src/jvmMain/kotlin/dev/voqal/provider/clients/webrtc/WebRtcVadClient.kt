@@ -38,6 +38,7 @@ class WebRtcVadClient(
     }
 
     private val log = project.getVoqalLogger(this::class)
+    override var voiceDetectionThreshold = 100.0
 
     init {
         vad?.setMode(VoiceActivityDetector.Mode.entries[sensitivity])
@@ -53,8 +54,10 @@ class WebRtcVadClient(
         for (i in 0 until samplesLength - step step step) {
             val frame = samples.copyOfRange(i, i + step)
             if (vad?.process(frame) == true) {
+                voiceProbability = 100.0
                 handleVoiceDetected()
             } else {
+                voiceProbability = 0.0
                 handleVoiceNotDetected()
             }
             detection.voiceDetected.set(isVoiceDetected)

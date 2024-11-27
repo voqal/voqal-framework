@@ -20,7 +20,7 @@ import java.io.File
 class PicovoiceCobraClient(
     private val project: Project,
     picovoiceKey: String,
-    var voiceDetectionThreshold: Double,
+    override var voiceDetectionThreshold: Double,
     override var voiceSilenceThreshold: Long,
     override var speechSilenceThreshold: Long,
     override var sustainedDurationMillis: Long,

@@ -213,7 +213,6 @@ class SharedAudioCapture(private val project: Project) {
 
     private fun captureAudio() {
         try {
-            val testMode = listeners.any { it.isTestListener() }
             val configService = project.service<VoqalConfigService>()
             val availableMicrophones = getAvailableMicrophones()
             if (availableMicrophones.isEmpty()) {
@@ -272,14 +271,17 @@ class SharedAudioCapture(private val project: Project) {
                     val audioData = audioQueue.take()
                     val liveDataListeners = listeners.filter { it.isLiveDataListener() }
                     val modeProvider = modeProviders[configService.getActivePromptName()]
+                    val testMode = listeners.any { it.isTestListener() }
                     if (!testMode && paused) continue
 
                     for (listener in liveDataListeners) {
                         val updateListener = (testMode && listener.isTestListener()) ||
                                 (!testMode && !listener.isTestListener())
                         if (updateListener) {
-                            if ((listener !is VadProvider && listener !is WakeProvider) && listener !== modeProvider) {
-                                continue //ignore audio, mode provider is handling
+                            if (testMode && !listener.isTestListener()) {
+                                if ((listener !is VadProvider && listener !is WakeProvider) && listener !== modeProvider) {
+                                    continue //ignore audio, mode provider is handling
+                                }
                             }
 
                             if (listener.sampleRate() == 24000f) {

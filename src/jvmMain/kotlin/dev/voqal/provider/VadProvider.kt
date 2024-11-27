@@ -10,6 +10,7 @@ import java.util.*
  */
 abstract class VadProvider(project: Project) : AiProvider, SharedAudioCapture.AudioDataListener {
 
+    abstract var voiceDetectionThreshold: Double
     abstract var sustainedDurationMillis: Long
     abstract var amnestyPeriodMillis: Long
     abstract var voiceSilenceThreshold: Long

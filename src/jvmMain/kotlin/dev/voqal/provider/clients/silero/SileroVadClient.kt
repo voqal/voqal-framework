@@ -13,7 +13,7 @@ import java.io.File
 //todo: impl config
 class SileroVadClient(
     private val project: Project,
-    var voiceDetectionThreshold: Double,
+    override var voiceDetectionThreshold: Double,
     override var voiceSilenceThreshold: Long,
     override var speechSilenceThreshold: Long,
     override var sustainedDurationMillis: Long,

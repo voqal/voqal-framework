@@ -121,7 +121,7 @@ kotlin {
                 implementation(libs.snakeyaml)
                 implementation("io.github.funnysaltyfish:partial-json-parser:1.0.2")
                 implementation("io.github.oshai:kotlin-logging:7.0.0")
-                implementation("com.jetbrains.intellij.platform:diagnostic:242.23726.103") {
+                implementation("com.jetbrains.intellij.platform:diagnostic:242.24807.21") {
                     isTransitive = false
                 }
                 implementation("com.jetbrains.intellij.platform:code-style:242.23726.103") {

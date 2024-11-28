@@ -129,11 +129,13 @@ class PicovoiceOrcaClient(
     }
 
     override suspend fun speechStream(request: SpeechStreamRequest): TtsProvider.RawAudio {
+        val startTime = System.currentTimeMillis()
         val streamRef = PointerByReference()
         var status = native.pv_orca_stream_open(orca, synthesizeParams, streamRef)
         PicovoiceNative.throwIfError(log, native, status)
 
-        log.debug("TTS stream opened")
+        log.debug { "TTS stream opened" }
+        var firstWrite = true
         val channel = ByteChannel()
         project.scope.launch {
             do {
@@ -153,6 +155,11 @@ class PicovoiceOrcaClient(
                     if (numSamplesChunk > 0) {
                         val pcmChunk = pcmRef.value
                         val pcmChunkBytes = pcmChunk.getByteArray(0, numSamplesChunk * 2)
+                        if (firstWrite) {
+                            project.service<VoqalConfigService>().getAiProvider().asObservabilityProvider()
+                                .logTtsLatency(System.currentTimeMillis() - startTime)
+                            firstWrite = false
+                        }
                         channel.writeFully(pcmChunkBytes, 0, pcmChunkBytes.size)
                         native.pv_orca_pcm_delete(pcmChunk)
                     }
@@ -169,6 +176,11 @@ class PicovoiceOrcaClient(
             if (numSamplesChunk > 0) {
                 val pcmChunk = pcmRef.value
                 val pcmChunkBytes = pcmChunk.getByteArray(0, numSamplesChunk * 2)
+                if (firstWrite) {
+                    project.service<VoqalConfigService>().getAiProvider().asObservabilityProvider()
+                        .logTtsLatency(System.currentTimeMillis() - startTime)
+                    firstWrite = false
+                }
                 channel.writeFully(pcmChunkBytes, 0, pcmChunkBytes.size)
                 native.pv_orca_pcm_delete(pcmChunk)
             }

@@ -61,7 +61,7 @@ kotlin {
                 implementation("com.microsoft.onnxruntime:onnxruntime:1.20.0")
                 implementation("io.dropwizard.metrics:metrics-core:4.2.29")
 
-                compileOnly("com.jetbrains.intellij.platform:code-style:242.23726.103") {
+                compileOnly("com.jetbrains.intellij.platform:code-style:242.24807.21") {
                     isTransitive = false
                 }
                 compileOnly("com.jetbrains.intellij.platform:core:242.23726.103") {
@@ -124,7 +124,7 @@ kotlin {
                 implementation("com.jetbrains.intellij.platform:diagnostic:242.23726.103") {
                     isTransitive = false
                 }
-                implementation("com.jetbrains.intellij.platform:code-style:242.23726.103") {
+                implementation("com.jetbrains.intellij.platform:code-style:242.24807.21") {
                     isTransitive = false
                 }
                 implementation("com.jetbrains.intellij.platform:core:242.23726.103") {

@@ -79,7 +79,7 @@ kotlin {
                 compileOnly("com.jetbrains.intellij.platform:extensions:242.23726.103") {
                     isTransitive = false
                 }
-                compileOnly("com.jetbrains.intellij.platform:util:242.23726.103") {
+                compileOnly("com.jetbrains.intellij.platform:util:242.24807.21") {
                     isTransitive = false
                 }
                 compileOnly("com.jetbrains.intellij.platform:util-base:242.23726.103") {
@@ -142,7 +142,7 @@ kotlin {
                 implementation("com.jetbrains.intellij.platform:extensions:242.23726.103") {
                     isTransitive = false
                 }
-                implementation("com.jetbrains.intellij.platform:util:242.23726.103") {
+                implementation("com.jetbrains.intellij.platform:util:242.24807.21") {
                     isTransitive = false
                 }
                 implementation("com.jetbrains.intellij.platform:util-base:242.23726.103") {

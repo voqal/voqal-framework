@@ -52,6 +52,13 @@ class DeepgramClient(
             "aura-helios-en",
             "aura-zeus-en"
         )
+
+        //pay as you go = $0.0150/1k characters
+        //growth = $0.0135/1k characters
+        private fun calculateCost(characters: Int, growth: Boolean): Double {
+            val rate = if (growth) 0.0135 else 0.015
+            return characters * rate / 1000
+        }
     }
 
     private val log = project.getVoqalLogger(this::class)
@@ -309,7 +316,7 @@ class DeepgramClient(
     }
 
     override suspend fun transcribe(speechFile: File, modelName: String): String {
-        log.info("Sending speech to STT provider: deepgram")
+        log.info { "Sending speech to STT provider: deepgram" }
         try {
             val params = getSttParams()
             val listenUrl = "$httpsProviderUrl/listen?$params"
@@ -346,6 +353,11 @@ class DeepgramClient(
             val sampleRate = 24000f
             val encoding = "linear16"
             val params = "model=${request.voice!!.value}&encoding=$encoding&sample_rate=${sampleRate.toInt()}"
+
+            val pricing = calculateCost(request.input.length, growth = false)
+            project.service<VoqalConfigService>().getAiProvider().asObservabilityProvider()
+                .logTtsCost(pricing)
+
             val response = client.post("$httpsProviderUrl/speak?$params") {
                 headers {
                     append(HttpHeaders.Authorization, "Token $providerKey")

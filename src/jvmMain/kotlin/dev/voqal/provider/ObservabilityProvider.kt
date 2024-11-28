@@ -34,4 +34,12 @@ interface ObservabilityProvider : AiProvider {
             log(request, response, requestTime, responseTime, statusCode, cacheId)
         }
     }
+
+    //todo: MetricsProvider?
+    fun logSttLatency(durationMs: Long) = Unit
+    fun logSttCost(cost: Double) = Unit
+    fun logTtsLatency(durationMs: Long) = Unit
+    fun logTtsCost(cost: Double) = Unit
+    fun logLlmLatency(durationMs: Long) = Unit
+    fun logLlmCost(cost: Double) = Unit
 }

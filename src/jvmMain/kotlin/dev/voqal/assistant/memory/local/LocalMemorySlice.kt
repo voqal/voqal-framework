@@ -271,6 +271,7 @@ class LocalMemorySlice(
                 completion = llmProvider.chatCompletion(request, directive)
             }
             val responseTime = System.currentTimeMillis()
+            aiProvider.asObservabilityProvider().logLlmLatency(responseTime - requestTime)
 
             try {
                 //todo: could just use JsonObject()
@@ -333,6 +334,14 @@ class LocalMemorySlice(
             val elapsedTimeSeconds = elapsedTimeMs / 1000.0
             val tps = if (elapsedTimeSeconds > 0) tokenCount / elapsedTimeSeconds else 0.0
             log.debug("Response TPS: $tps")
+
+            //todo: pricing should be moved to provider code
+            val currency = response.getSpentCurrency()
+            if (currency != -1.0) {
+                aiProvider.asObservabilityProvider().logLlmCost(currency)
+            } else {
+                log.debug { "Unable to determine cost of model: ${lmSettings.name}" }
+            }
 
             return response
         } catch (e: Throwable) {

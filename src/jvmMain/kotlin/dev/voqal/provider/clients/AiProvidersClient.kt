@@ -1,7 +1,9 @@
 package dev.voqal.provider.clients
 
+import com.aallam.openai.api.chat.ChatCompletionRequest
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
+import dev.voqal.assistant.VoqalResponse
 import dev.voqal.provider.*
 import dev.voqal.services.VoqalConfigService
 import dev.voqal.services.service
@@ -115,7 +117,62 @@ class AiProvidersClient(private val project: Project) : AiProvider {
     }
 
     override fun asObservabilityProvider(): ObservabilityProvider {
-        return observabilityProviders.first { it.isObservabilityProvider() }.asObservabilityProvider()
+        return object : ObservabilityProvider {
+            override suspend fun log(
+                request: ChatCompletionRequest,
+                response: VoqalResponse,
+                requestTime: Long,
+                responseTime: Long,
+                statusCode: Int,
+                cacheId: String?
+            ) {
+                observabilityProviders.forEach {
+                    it.log(request, response, requestTime, responseTime, statusCode, cacheId)
+                }
+            }
+
+            override fun logSttLatency(durationMs: Long) {
+                observabilityProviders.forEach {
+                    it.logSttLatency(durationMs)
+                }
+            }
+
+            override fun logSttCost(cost: Double) {
+                observabilityProviders.forEach {
+                    it.logSttCost(cost)
+                }
+            }
+
+            override fun logTtsLatency(durationMs: Long) {
+                observabilityProviders.forEach {
+                    it.logTtsLatency(durationMs)
+                }
+            }
+
+            override fun logTtsCost(cost: Double) {
+                observabilityProviders.forEach {
+                    it.logTtsCost(cost)
+                }
+            }
+
+            override fun logLlmLatency(durationMs: Long) {
+                observabilityProviders.forEach {
+                    it.logLlmLatency(durationMs)
+                }
+            }
+
+            override fun logLlmCost(cost: Double) {
+                observabilityProviders.forEach {
+                    it.logLlmCost(cost)
+                }
+            }
+
+            override fun dispose() {
+                observabilityProviders.forEach {
+                    it.dispose()
+                }
+            }
+        }
     }
 
     override fun isStmProvider(): Boolean {
@@ -144,6 +201,10 @@ class AiProvidersClient(private val project: Project) : AiProvider {
                 assistantProviders.isNotEmpty() ||
                 observabilityProviders.isNotEmpty() ||
                 stmProviders.isNotEmpty()
+    }
+
+    fun getObservabilityProviders(): List<ObservabilityProvider> {
+        return observabilityProviders
     }
 
     override fun dispose() = Unit

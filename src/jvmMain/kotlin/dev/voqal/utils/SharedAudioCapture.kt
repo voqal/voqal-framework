@@ -406,9 +406,12 @@ class SharedAudioCapture(private val project: Project) {
 
                             val sttModelName = config.speechToTextSettings.modelName
                             try {
+                                val sttStartTime = System.currentTimeMillis()
                                 val transcript = sttProvider.transcribe(speechFile, sttModelName)
+                                aiProvider.asObservabilityProvider()
+                                    .logSttLatency(System.currentTimeMillis() - sttStartTime)
                                 val spokenTranscript = SpokenTranscript(transcript, speechId, isFinal = true)
-                                log.info("Transcript: ${spokenTranscript.transcript}")
+                                log.info { "Transcript: ${spokenTranscript.transcript}" }
                                 directiveService.handleTranscription(spokenTranscript)
                             } catch (e: OpenAIException) {
                                 val errorMessage = e.message ?: "An unknown error occurred"

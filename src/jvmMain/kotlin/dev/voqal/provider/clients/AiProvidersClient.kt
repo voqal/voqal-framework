@@ -5,6 +5,7 @@ import com.intellij.openapi.project.Project
 import com.intellij.openapi.util.Disposer
 import dev.voqal.assistant.VoqalResponse
 import dev.voqal.provider.*
+import dev.voqal.provider.clients.dropwizard.DropWizardMetricsProvider
 import dev.voqal.services.VoqalConfigService
 import dev.voqal.services.service
 
@@ -18,6 +19,10 @@ class AiProvidersClient(private val project: Project) : AiProvider {
     private val assistantProviders = mutableListOf<AssistantProvider>()
     private val observabilityProviders = mutableListOf<ObservabilityProvider>()
     private val stmProviders = mutableListOf<StmProvider>()
+
+    init {
+        addObservabilityProvider(DropWizardMetricsProvider())
+    }
 
     fun addWakeProvider(provider: WakeProvider) {
         wakeProviders.add(provider)

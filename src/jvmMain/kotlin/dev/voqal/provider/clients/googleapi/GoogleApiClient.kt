@@ -35,7 +35,8 @@ import java.util.*
 class GoogleApiClient(
     override val name: String,
     private val project: Project,
-    private val providerKey: String
+    private val providerKey: String,
+    private val audioModality: Boolean
 ) : LlmProvider, StmProvider {
 
     companion object {
@@ -304,6 +305,7 @@ class GoogleApiClient(
         )
     }
 
+    override fun isStmProvider() = audioModality
     override fun isStreamable() = true
     override fun getAvailableModelNames() = MODELS
     override fun dispose() = Unit

@@ -172,6 +172,18 @@ class AiProvidersClient(private val project: Project) : AiProvider {
                 }
             }
 
+            override fun logStmLatency(durationMs: Long) {
+                observabilityProviders.forEach {
+                    it.logStmLatency(durationMs)
+                }
+            }
+
+            override fun logStmCost(cost: Double) {
+                observabilityProviders.forEach {
+                    it.logStmCost(cost)
+                }
+            }
+
             override fun dispose() {
                 observabilityProviders.forEach {
                     it.dispose()

@@ -39,6 +39,28 @@ class RealtimeSession(
     private val azureHost: Boolean = false
 ) : Disposable {
 
+    companion object {
+        fun calculateTtsCost(durationInSeconds: Double): Double {
+            //24¢ per minutes
+            val rate = 0.24 / 60
+            return durationInSeconds * rate
+        }
+
+        private fun calculateSttCost(durationInSeconds: Double): Double {
+            //6¢ per minutes
+            val rate = 0.06 / 60
+            return durationInSeconds * rate
+        }
+
+        private fun calculateLlmCost(inputTokens: Int, outputTokens: Int): Double {
+            //$5.00 /1M input tokens
+            //$20.00 /1M output tokens
+            val inputRate = 5.0 / 1_000_000
+            val outputRate = 20.0 / 1_000_000
+            return inputTokens * inputRate + outputTokens * outputRate
+        }
+    }
+
     private val log = project.getVoqalLogger(this::class)
     private var capturing = false
     private lateinit var session: DefaultClientWebSocketSession
@@ -58,6 +80,9 @@ class RealtimeSession(
     private val realtimeAudioMap = mutableMapOf<String, RealtimeAudio>()
     private val realtimeToolMap = mutableMapOf<String, RealtimeTool>()
     private var serverVad = false
+    private var speechStartTime = -1L
+    private var speechEndTime = -1L
+    private var currentInputTokens = 0
 
     init {
         val config = project.service<VoqalConfigService>().getConfig()
@@ -81,6 +106,7 @@ class RealtimeSession(
         }
         audioQueue.clear()
         responseQueue.clear()
+        currentInputTokens = 0
 
         try {
             session = runBlocking {
@@ -227,6 +253,12 @@ class RealtimeSession(
                                     log.warnChat(errorMessage)
                                 }
                             } else if (json.getString("type") == "response.function_call_arguments.delta") {
+                                if (speechEndTime != -1L) {
+                                    project.service<VoqalConfigService>().getAiProvider().asObservabilityProvider()
+                                        .logStmLatency(System.currentTimeMillis() - speechEndTime)
+                                    speechEndTime = -1L
+                                }
+
 //                                val respId = json.getString("response_id")
 //                                val deltaValue = deltaMap.get(respId)
 //                                if (deltaValue is FlowCollector<*>) {
@@ -245,7 +277,20 @@ class RealtimeSession(
                                     RealtimeTool(project, session, convoId)
                                 }
                                 realtimeTool.executeTool(json)
+
+                                val tokens = project.service<VoqalContextService>().getTokenCount(json.toString())
+                                project.service<VoqalConfigService>().getAiProvider().asObservabilityProvider()
+                                    .logStmCost(calculateLlmCost(currentInputTokens, tokens))
+
+                                //just guessing here, but I believe the input tokens is cumulative of the output tokens
+                                currentInputTokens += tokens
                             } else if (json.getString("type") == "response.audio.delta") {
+                                if (speechEndTime != -1L) {
+                                    project.service<VoqalConfigService>().getAiProvider().asObservabilityProvider()
+                                        .logStmLatency(System.currentTimeMillis() - speechEndTime)
+                                    speechEndTime = -1L
+                                }
+
                                 val convoId = json.getString("item_id")
                                 val realtimeAudio = realtimeAudioMap.getOrPut(convoId) {
                                     RealtimeAudio(project, convoId)
@@ -258,8 +303,13 @@ class RealtimeSession(
                             } else if (json.getString("type") == "input_audio_buffer.speech_started") {
                                 log.info("Realtime speech started")
                                 stopCurrentVoice()
+                                speechStartTime = System.currentTimeMillis()
                             } else if (json.getString("type") == "input_audio_buffer.speech_stopped") {
                                 log.info("Realtime speech stopped")
+                                speechEndTime = System.currentTimeMillis()
+
+                                project.service<VoqalConfigService>().getAiProvider().asObservabilityProvider()
+                                    .logStmCost(calculateSttCost((speechEndTime - speechStartTime) / 1000.0))
                             } else if (json.getString("type") == "conversation.item.input_audio_transcription.completed") {
                                 var transcript = json.getString("transcript")
                                 if (transcript.endsWith("\n")) {
@@ -277,6 +327,13 @@ class RealtimeSession(
                             } else if (json.getString("type") == "response.text.done") {
                                 val text = json.getString("text")
                                 log.info("Assistant text: $text")
+
+                                val tokens = project.service<VoqalContextService>().getTokenCount(json.toString())
+                                project.service<VoqalConfigService>().getAiProvider().asObservabilityProvider()
+                                    .logStmCost(calculateLlmCost(currentInputTokens, tokens))
+
+                                //just guessing here, but I believe the input tokens is cumulative of the output tokens
+                                currentInputTokens += tokens
 
                                 responseQueue.take().complete(JsonObject().apply {
                                     put("tool", "answer_question")
@@ -362,6 +419,7 @@ class RealtimeSession(
         }
 
         if (detection.speechDetected.get()) {
+            speechStartTime = System.currentTimeMillis()
             stopCurrentVoice()
             //todo: response.cancel
 
@@ -371,8 +429,12 @@ class RealtimeSession(
             }
             audioQueue.put(data)
         } else if (capturing && !detection.speechDetected.get()) {
+            speechEndTime = System.currentTimeMillis()
             capturing = false
             audioQueue.put(SharedAudioCapture.EMPTY_BUFFER)
+
+            project.service<VoqalConfigService>().getAiProvider().asObservabilityProvider()
+                .logStmCost(calculateSttCost((speechEndTime - speechStartTime) / 1000.0))
         }
     }
 

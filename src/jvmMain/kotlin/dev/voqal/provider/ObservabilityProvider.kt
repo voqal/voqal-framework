@@ -42,4 +42,6 @@ interface ObservabilityProvider : AiProvider {
     fun logTtsCost(cost: Double) = Unit
     fun logLlmLatency(durationMs: Long) = Unit
     fun logLlmCost(cost: Double) = Unit
+    fun logStmLatency(durationMs: Long) = Unit
+    fun logStmCost(cost: Double) = Unit
 }

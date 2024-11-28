@@ -16,6 +16,7 @@ class DropWizardMetricsProvider : ObservabilityProvider {
     private var sttCost: Double = 0.0
     private var ttsCost: Double = 0.0
     private var llmCost: Double = 0.0
+    private var stmCost: Double = 0.0
 
     private fun updateLog(log: ConcurrentLinkedDeque<Long>, value: Long) {
         if (log.size >= 100) {
@@ -85,6 +86,22 @@ class DropWizardMetricsProvider : ObservabilityProvider {
 
     fun getLlmLatencyLog(): List<Long> {
         return llmLatencyLog.toList()
+    }
+
+    override fun logStmLatency(durationMs: Long) {
+        metrics.timer("stm-latency").update(durationMs, java.util.concurrent.TimeUnit.MILLISECONDS)
+    }
+
+    override fun logStmCost(cost: Double) {
+        stmCost += cost
+    }
+
+    fun getStmLatency(): Snapshot {
+        return metrics.timer("stm-latency").snapshot
+    }
+
+    fun getStmCost(): Double {
+        return stmCost
     }
 
     override suspend fun log(

@@ -1,11 +1,9 @@
 package dev.voqal.provider.clients.openai
 
 import com.intellij.openapi.project.Project
-import dev.voqal.services.VoqalVoiceService
-import dev.voqal.services.getVoqalLogger
-import dev.voqal.services.scope
-import dev.voqal.services.service
+import dev.voqal.services.*
 import dev.voqal.utils.SharedAudioCapture
+import dev.voqal.utils.SharedAudioCapture.Companion.FORMAT
 import io.vertx.core.json.JsonObject
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
@@ -16,6 +14,8 @@ import java.io.PipedInputStream
 import java.io.PipedOutputStream
 import java.util.*
 import java.util.concurrent.atomic.AtomicBoolean
+import java.util.concurrent.atomic.AtomicLong
+import javax.sound.sampled.AudioFormat
 
 class RealtimeAudio(private val project: Project, convoId: String) {
 
@@ -29,6 +29,7 @@ class RealtimeAudio(private val project: Project, convoId: String) {
     private val channel = Channel<Job>(capacity = Channel.UNLIMITED).apply {
         project.scope.launch { consumeEach { it.join() } }
     }
+    private val audioBytesWritten = AtomicLong(0)
 
     init {
         log.debug { "Initializing RealtimeAudio. Convo id: $convoId" }
@@ -39,7 +40,9 @@ class RealtimeAudio(private val project: Project, convoId: String) {
         audioWrote.set(true)
         channel.trySend(project.scope.launch(start = CoroutineStart.LAZY) {
             try {
-                pos.write(Base64.getDecoder().decode(json.getString("delta")))
+                val audioData = Base64.getDecoder().decode(json.getString("delta"))
+                audioBytesWritten.addAndGet(audioData.size.toLong())
+                pos.write(audioData)
             } catch (e: Throwable) {
                 if (audioPlaying.get()) {
                     log.error(e) { "Error writing audio data" }
@@ -59,6 +62,19 @@ class RealtimeAudio(private val project: Project, convoId: String) {
         channel.trySend(project.scope.launch(start = CoroutineStart.LAZY) {
             try {
                 pos.write(SharedAudioCapture.EMPTY_BUFFER)
+
+                val targetFormat = AudioFormat(
+                    FORMAT.encoding,
+                    24000.0f,
+                    FORMAT.sampleSizeInBits,
+                    FORMAT.channels,
+                    FORMAT.frameSize,
+                    24000.0f,
+                    FORMAT.isBigEndian
+                )
+                val duration = audioBytesWritten.get().toDouble() / (targetFormat.frameSize * targetFormat.frameRate)
+                project.service<VoqalConfigService>().getAiProvider().asObservabilityProvider()
+                    .logStmCost(RealtimeSession.calculateTtsCost(duration))
             } catch (e: Throwable) {
                 if (audioPlaying.get()) {
                     log.error(e) { "Error writing audio data" }

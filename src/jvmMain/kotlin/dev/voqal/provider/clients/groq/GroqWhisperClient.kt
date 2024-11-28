@@ -47,7 +47,7 @@ class GroqWhisperClient(
 
         val durationInSeconds = getAudioDuration(speechFile)
         if (durationInSeconds < 0.1) {
-            log.warn("Audio transcript file is too short. Duration: $durationInSeconds")
+            log.warn { "Audio transcript file is too short. Duration: $durationInSeconds" }
             return ""
         }
 

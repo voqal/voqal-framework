@@ -13,6 +13,7 @@ import dev.voqal.provider.TtsProvider
 import dev.voqal.services.*
 import dev.voqal.utils.Iso639Language
 import dev.voqal.utils.SharedAudioCapture
+import io.github.oshai.kotlinlogging.KotlinLogging
 import io.ktor.client.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.websocket.*
@@ -37,6 +38,8 @@ class DeepgramClient(
 ) : SttProvider, TtsProvider, SharedAudioCapture.AudioDataListener {
 
     companion object {
+        private val log = KotlinLogging.logger {}
+
         @JvmStatic
         val VOICES = arrayOf(
             "aura-asteria-en",
@@ -53,15 +56,27 @@ class DeepgramClient(
             "aura-zeus-en"
         )
 
-        //pay as you go = $0.0150/1k characters
-        //growth = $0.0135/1k characters
-        private fun calculateCost(characters: Int, growth: Boolean): Double {
+        private fun calculateTtsCost(characters: Int, growth: Boolean): Double {
+            //pay as you go = $0.0150/1k characters
+            //growth = $0.0135/1k characters
             val rate = if (growth) 0.0135 else 0.015
             return characters * rate / 1000
         }
+
+        private fun calculateSttCost(durationInSeconds: Double, modelName: String): Double {
+            return when (modelName) {
+                "nova-2" -> 0.0043 * durationInSeconds / 60
+                "nova-1" -> 0.0043 * durationInSeconds / 60
+                "enhanced" -> 0.0145 * durationInSeconds / 60
+                "base" -> 0.0125 * durationInSeconds / 60
+                else -> {
+                    log.warn { "Unable to calculate cost for model: $modelName" }
+                    0.0
+                }
+            }
+        }
     }
 
-    private val log = project.getVoqalLogger(this::class)
     private val client = HttpClient {
         install(HttpTimeout) { requestTimeoutMillis = 30_000 }
         install(WebSockets)
@@ -317,9 +332,19 @@ class DeepgramClient(
 
     override suspend fun transcribe(speechFile: File, modelName: String): String {
         log.info { "Sending speech to STT provider: deepgram" }
+
+        val durationInSeconds = getAudioDuration(speechFile)
+        if (durationInSeconds < 0.1) {
+            log.warn { "Audio transcript file is too short. Duration: $durationInSeconds" }
+            return ""
+        }
+
         try {
             val params = getSttParams()
             val listenUrl = "$httpsProviderUrl/listen?$params"
+            project.service<VoqalConfigService>().getAiProvider().asObservabilityProvider()
+                .logSttCost(calculateSttCost(durationInSeconds, modelName))
+
             val response = client.post(listenUrl) {
                 headers {
                     append(HttpHeaders.Authorization, "Token $providerKey")
@@ -354,7 +379,7 @@ class DeepgramClient(
             val encoding = "linear16"
             val params = "model=${request.voice!!.value}&encoding=$encoding&sample_rate=${sampleRate.toInt()}"
 
-            val pricing = calculateCost(request.input.length, growth = false)
+            val pricing = calculateTtsCost(request.input.length, growth = false)
             project.service<VoqalConfigService>().getAiProvider().asObservabilityProvider()
                 .logTtsCost(pricing)
 

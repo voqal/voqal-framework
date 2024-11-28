@@ -29,8 +29,21 @@ class GroqWhisperClient(
     }
     private val providerUrl = "https://api.groq.com/openai/v1/audio/transcriptions"
 
+    private fun calculateSttCost(durationInSeconds: Double, modelName: String): Double {
+        val durationInSecondsRounded = if (durationInSeconds < 10) 10.0 else durationInSeconds
+        return when (modelName) {
+            "whisper-large-v3" -> 0.111 * durationInSecondsRounded / 3600
+            "whisper-large-v3-turbo" -> 0.04 * durationInSecondsRounded / 3600
+            "distil-whisper-large-v3-en" -> 0.02 * durationInSecondsRounded / 3600
+            else -> {
+                log.warn { "Unable to calculate cost for model: $modelName" }
+                0.0
+            }
+        }
+    }
+
     override suspend fun transcribe(speechFile: File, modelName: String): String {
-        log.info("Sending speech to STT provider: groq")
+        log.info { "Sending speech to STT provider: groq" }
 
         val durationInSeconds = getAudioDuration(speechFile)
         if (durationInSeconds < 0.1) {
@@ -39,27 +52,32 @@ class GroqWhisperClient(
         }
 
         var languageCode: String? = null
-        val sttSettings = project.service<VoqalConfigService>().getConfig().speechToTextSettings
+        val configService = project.service<VoqalConfigService>()
+        val sttSettings = configService.getConfig().speechToTextSettings
         if (sttSettings.language != Iso639Language.AUTO_DETECT) {
             languageCode = sttSettings.language.code
         }
+        configService.getAiProvider().asObservabilityProvider()
+            .logSttCost(calculateSttCost(durationInSeconds, modelName))
 
         try {
             val response = client.post(providerUrl) {
                 header("Authorization", "Bearer $providerKey")
-                setBody(MultiPartFormDataContent(
-                    formData {
-                        append("file", speechFile.readBytes(), Headers.build {
-                            append(HttpHeaders.ContentDisposition, "filename=${speechFile.name}")
-                        })
-                        append("model", modelName)
-                        append("temperature", "0")
-                        append("response_format", "json")
-                        if (languageCode != null) {
-                            append("language", languageCode)
+                setBody(
+                    MultiPartFormDataContent(
+                        formData {
+                            append("file", speechFile.readBytes(), Headers.build {
+                                append(HttpHeaders.ContentDisposition, "filename=${speechFile.name}")
+                            })
+                            append("model", modelName)
+                            append("temperature", "0")
+                            append("response_format", "json")
+                            if (languageCode != null) {
+                                append("language", languageCode)
+                            }
                         }
-                    }
-                ))
+                    )
+                )
             }
             if (response.status.isSuccess()) {
                 val json = Json.parseToJsonElement(response.bodyAsText()).jsonObject

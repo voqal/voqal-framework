@@ -5,5 +5,4 @@ package dev.voqal.provider
  */
 interface StmProvider : AiProvider {
     val name: String
-    override fun isStmProvider() = true
 }

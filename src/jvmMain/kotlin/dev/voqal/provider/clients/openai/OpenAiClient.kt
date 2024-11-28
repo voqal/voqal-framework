@@ -45,7 +45,7 @@ open class OpenAiClient(
     private val project: Project,
     openAiConfig: OpenAIConfig,
     providerKey: String? = null,
-    audioModality: Boolean = false,
+    private val audioModality: Boolean = false,
     modelName: String? = null
 ) : StmProvider, LlmProvider, SttProvider, TtsProvider, AssistantProvider, SharedAudioCapture.AudioDataListener {
 
@@ -254,6 +254,7 @@ open class OpenAiClient(
         realtimeSession?.onAudioData(data, detection)
     }
 
+    override fun isStmProvider() = audioModality
     override fun sampleRate() = realtimeSession?.sampleRate() ?: super.sampleRate()
     override fun isLiveDataListener() = realtimeSession != null
     override fun isStreamable() = true

@@ -378,18 +378,23 @@ class LocalMemorySlice(
         if (editMode) {
             messageContent = TextContent(content = fullText)
         } else if (toolCall == null) {
-            //default to answer_question tool
-            toolCall = ToolCallChunk(
-                index = 0,
-                type = "function",
-                id = ToolId("answer_question"),
-                function = FunctionCall(
-                    nameOrNull = "answer_question",
-                    argumentsOrNull = JsonObject().apply {
-                        put("text", fullText)
-                    }.toString()
+            val toolCallChunk = ResponseParser.parseToolCallChunk(fullText)
+            if (toolCallChunk == null) {
+                //default to answer_question tool
+                toolCall = ToolCallChunk(
+                    index = 0,
+                    type = "function",
+                    id = ToolId("answer_question"),
+                    function = FunctionCall(
+                        nameOrNull = "answer_question",
+                        argumentsOrNull = JsonObject().apply {
+                            put("text", fullText)
+                        }.toString()
+                    )
                 )
-            )
+            } else {
+                toolCall = toolCallChunk
+            }
         } else {
             toolCall = toolCall.copy(
                 function = toolCall.function!!.copy(

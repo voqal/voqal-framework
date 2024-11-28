@@ -359,6 +359,27 @@ object ResponseParser {
         return VoqalResponse(directive, message.toolCalls ?: emptyList(), completion)
     }
 
+    fun parseToolCallChunk(jsonBlock: String): ToolCallChunk? {
+        val json = try {
+            JsonObject(jsonBlock)
+        } catch (_: Exception) {
+            JsonObject(CodeExtractor.extractCodeBlock(jsonBlock))
+        }
+        if (json.containsKey("name") && json.containsKey("parameters")) {
+            return ToolCallChunk(
+                index = 0,
+                type = "function",
+                id = ToolId(json.getString("name")),
+                function = FunctionCall(
+                    nameOrNull = json.getString("name"),
+                    argumentsOrNull = json.getJsonObject("parameters").toString()
+                )
+            )
+        } else {
+            return null
+        }
+    }
+
     private fun looksLikeAnswerQuestion(input: String): Boolean {
         val hasVowels = input.any { it in "aeiouAEIOU" }
         val hasSpaces = input.contains(" ")

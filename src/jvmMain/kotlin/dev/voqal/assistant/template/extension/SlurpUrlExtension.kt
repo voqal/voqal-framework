@@ -1,4 +1,4 @@
-package dev.voqal.assistant.template
+package dev.voqal.assistant.template.extension
 
 import dev.voqal.services.VoqalConfigService.Companion.toHeaderMap
 import dev.voqal.services.VoqalDirectiveService

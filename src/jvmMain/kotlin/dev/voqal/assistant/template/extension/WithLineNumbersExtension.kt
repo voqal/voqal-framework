@@ -1,4 +1,4 @@
-package dev.voqal.assistant.template
+package dev.voqal.assistant.template.extension
 
 import io.pebbletemplates.pebble.extension.AbstractExtension
 import io.pebbletemplates.pebble.extension.Function

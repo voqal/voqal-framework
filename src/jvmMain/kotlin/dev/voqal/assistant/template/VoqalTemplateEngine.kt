@@ -1,5 +1,6 @@
 package dev.voqal.assistant.template
 
+import dev.voqal.assistant.template.extension.*
 import io.pebbletemplates.pebble.PebbleEngine
 import io.pebbletemplates.pebble.extension.Extension
 import io.pebbletemplates.pebble.lexer.Syntax

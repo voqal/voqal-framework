@@ -1,4 +1,4 @@
-package dev.voqal.assistant.template
+package dev.voqal.assistant.template.extension
 
 import dev.voqal.assistant.VoqalDirective
 import dev.voqal.services.VoqalMemoryService
@@ -9,15 +9,15 @@ import io.pebbletemplates.pebble.extension.Function
 import io.pebbletemplates.pebble.template.EvaluationContext
 import io.pebbletemplates.pebble.template.PebbleTemplate
 
-class AddUserContextExtension : AbstractExtension() {
+class GetUserContextExtension : AbstractExtension() {
 
     override fun getFunctions() = mapOf(
-        "addUserContext" to AddContextFunction()
+        "getUserContext" to AddContextFunction()
     )
 
     class AddContextFunction : Function {
         override fun getArgumentNames(): List<String> {
-            return listOf("key", "value")
+            return listOf("key")
         }
 
         override fun execute(
@@ -32,14 +32,10 @@ class AddUserContextExtension : AbstractExtension() {
             if (key == null) {
                 log.warn("Key is null")
                 return null
-
             }
-            val value = args["value"]
 
             val memoryService = project.service<VoqalMemoryService>()
-            memoryService.putLongTermUserData(key, value)
-
-            return null
+            return memoryService.getLongTermUserData(key)
         }
     }
 }

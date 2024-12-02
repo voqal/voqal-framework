@@ -272,7 +272,7 @@ object ResponseParser {
                                     function = FunctionCall(
                                         nameOrNull = "answer_question", //todo: AnswerQuestionTool.NAME,
                                         argumentsOrNull = JsonObject().apply {
-                                            put("answer", jsonObject.getString("answer"))
+                                            put("text", jsonObject.getString("answer"))
                                         }.toString()
                                     )
                                 )
@@ -313,7 +313,7 @@ object ResponseParser {
                                     function = FunctionCall(
                                         nameOrNull = "answer_question", //todo: AnswerQuestionTool.NAME,
                                         argumentsOrNull = JsonObject().apply {
-                                            put("answer", parse["answer"])
+                                            put("text", parse["answer"])
                                         }.toString()
                                     )
                                 )
@@ -328,7 +328,7 @@ object ResponseParser {
                                 function = FunctionCall(
                                     nameOrNull = "answer_question", //todo: AnswerQuestionTool.NAME,
                                     argumentsOrNull = JsonObject().apply {
-                                        put("answer", message.content)
+                                        put("text", message.content)
                                     }.toString()
                                 )
                             )
@@ -363,7 +363,22 @@ object ResponseParser {
         val json = try {
             JsonObject(jsonBlock)
         } catch (_: Exception) {
-            JsonObject(CodeExtractor.extractCodeBlock(jsonBlock))
+            try {
+                JsonObject(CodeExtractor.extractCodeBlock(jsonBlock))
+            } catch (_: Exception) {
+                //default to answer
+                return ToolCallChunk(
+                    index = 0,
+                    type = "function",
+                    id = ToolId("answer_question"),
+                    function = FunctionCall(
+                        nameOrNull = "answer_question",
+                        argumentsOrNull = JsonObject().apply {
+                            put("text", jsonBlock)
+                        }.toString()
+                    )
+                )
+            }
         }
         if (json.containsKey("name") && json.containsKey("parameters")) {
             return ToolCallChunk(

@@ -25,6 +25,7 @@ class VoqalTemplateEngine {
                 .extension(AddUserContextExtension())
                 .extension(GetUserContextExtension())
                 .extension(SlurpUrlExtension())
+                .extension(LibraryIncludeExtension())
                 .apply {
                     customExtensions.forEach { extension(it) }
                 }

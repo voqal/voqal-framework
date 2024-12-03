@@ -23,6 +23,7 @@ import javax.mail.Session
 import javax.mail.internet.InternetAddress
 import javax.mail.internet.MimeMessage
 
+@Suppress("unused") // external API
 class GmailConnection(project: Project, var accessToken: String) {
 
     companion object {

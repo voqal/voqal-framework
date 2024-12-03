@@ -76,7 +76,11 @@ data class AssistantContext(
                     })
                 })
             }
-            val jsonElement = Json.parseToJsonElement(jsonObject.toString())
+            return jsonToYaml(jsonObject.toString())
+        }
+
+        fun jsonToYaml(jsonString: String): String {
+            val jsonElement = Json.parseToJsonElement(jsonString)
             val dataMap = convertJsonElementToMap(jsonElement)
 
             val options = DumperOptions().apply {

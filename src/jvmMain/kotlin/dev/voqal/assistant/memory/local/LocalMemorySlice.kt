@@ -15,6 +15,7 @@ import dev.voqal.assistant.processing.ResponseParser
 import dev.voqal.assistant.tool.ContextUpdate
 import dev.voqal.config.settings.PromptSettings
 import dev.voqal.config.settings.PromptSettings.FunctionCalling
+import dev.voqal.provider.LlmProvider
 import dev.voqal.services.*
 import io.vertx.core.json.JsonObject
 import kotlinx.coroutines.CoroutineScope
@@ -174,101 +175,10 @@ class LocalMemorySlice(
         val requestTime = System.currentTimeMillis()
         var completion: ChatCompletion? = null
         try {
-            if (streamingEnabled) {
-                val chunks = mutableListOf<ChatCompletionChunk>()
-                var deltaRole: Role? = null
-                val fullText = StringBuilder()
-                var deltaToolCall: ToolCallChunk? = null //todo: support streaming multiple tools
-
-                var partialContextData = mapOf<String, Any>()
-                val chunkProcessingChannel = Channel<ChatCompletionChunk>(capacity = Channel.UNLIMITED)
-                val processingJob = CoroutineScope(Dispatchers.Default).launch {
-                    for (chunk in chunkProcessingChannel) {
-                        try {
-                            val updatedChunk = chunk.copy(
-                                choices = chunk.choices.map {
-                                    if (deltaToolCall != null) {
-                                        it.copy(
-                                            delta = it.delta!!.copy(
-                                                role = deltaRole,
-                                                toolCalls = listOf(
-                                                    deltaToolCall!!.copy(
-                                                        function = deltaToolCall!!.function!!.copy(
-                                                            argumentsOrNull = fullText.toString()
-                                                        )
-                                                    )
-                                                )
-                                            )
-                                        )
-                                    } else {
-                                        it.copy(
-                                            delta = it.delta!!.copy(
-                                                role = deltaRole,
-                                                content = fullText.toString()
-                                            )
-                                        )
-                                    }
-                                }
-                            )
-                            try {
-                                val result = PartialJsonParser.parse(
-                                    updatedChunk.choices.first().delta!!.toolCalls!!.first().function!!.arguments
-                                ) as Map<String, Any>?
-                                if (partialContextData != result && result != null) {
-                                    partialContextData = result
-                                    if (result.isNotEmpty()) {
-                                        val listener = deltaToolCall?.function?.name?.let {
-                                            partialContextListeners[it]
-                                        }
-                                        if (listener != null) {
-                                            log.trace { "Sending partial context update to listener" }
-                                            listener.invoke(ContextUpdate(result, false))
-                                        }
-                                    }
-                                }
-                            } catch (e: Throwable) {
-                                log.warn("Failed to parse tool call arguments: ${e.message}")
-                                continue
-                            }
-                        } catch (e: Throwable) {
-                            continue
-                        }
-                    }
-                }
-
-                llmProvider.streamChatCompletion(request, directive).collect {
-                    chunks.add(it)
-                    if (deltaRole == null) {
-                        deltaRole = it.choices.firstOrNull()?.delta?.role
-                    }
-                    if (deltaToolCall == null) {
-                        deltaToolCall = it.choices.firstOrNull()?.delta?.toolCalls?.firstOrNull()
-                    }
-
-                    if (it.choices.firstOrNull()?.delta?.toolCalls != null) {
-                        fullText.append(
-                            it.choices.firstOrNull()?.delta?.toolCalls?.firstOrNull()?.function?.arguments ?: ""
-                        )
-                        if (fullText.isEmpty()) {
-                            return@collect
-                        }
-                    } else {
-                        fullText.append(it.choices.firstOrNull()?.delta?.content ?: "")
-                        //todo: \n is a condition EditText needs, not general purpose
-                        if (it.choices.firstOrNull()?.delta?.content?.contains("\n") in setOf(null, false)) {
-                            return@collect //wait till new line to progress streaming edit
-                        }
-                    }
-
-                    chunkProcessingChannel.send(it)
-                }
-
-                chunkProcessingChannel.close()
-                processingJob.join()
-
-                completion = toChatCompletion(deltaRole!!, deltaToolCall, chunks, fullText.toString(), promptSettings.editMode)
+            completion = if (streamingEnabled) {
+                collectAndCombineChunks(llmProvider, request, directive, promptSettings)
             } else {
-                completion = llmProvider.chatCompletion(request, directive)
+                llmProvider.chatCompletion(request, directive)
             }
             val responseTime = System.currentTimeMillis()
             aiProvider.asObservabilityProvider().logLlmLatency(responseTime - requestTime)
@@ -359,6 +269,106 @@ class LocalMemorySlice(
             }
             throw e
         }
+    }
+
+    private suspend fun collectAndCombineChunks(
+        llmProvider: LlmProvider,
+        request: ChatCompletionRequest,
+        directive: VoqalDirective,
+        promptSettings: PromptSettings
+    ): ChatCompletion {
+        val chunks = mutableListOf<ChatCompletionChunk>()
+        var deltaRole: Role? = null
+        val fullText = StringBuilder()
+        var deltaToolCall: ToolCallChunk? = null //todo: support streaming multiple tools
+
+        var partialContextData = mapOf<String, Any>()
+        val chunkProcessingChannel = Channel<ChatCompletionChunk>(capacity = Channel.UNLIMITED)
+        val processingJob = CoroutineScope(Dispatchers.Default).launch {
+            for (chunk in chunkProcessingChannel) {
+                try {
+                    val updatedChunk = chunk.copy(
+                        choices = chunk.choices.map {
+                            if (deltaToolCall != null) {
+                                it.copy(
+                                    delta = it.delta!!.copy(
+                                        role = deltaRole,
+                                        toolCalls = listOf(
+                                            deltaToolCall!!.copy(
+                                                function = deltaToolCall!!.function!!.copy(
+                                                    argumentsOrNull = fullText.toString()
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            } else {
+                                it.copy(
+                                    delta = it.delta!!.copy(
+                                        role = deltaRole,
+                                        content = fullText.toString()
+                                    )
+                                )
+                            }
+                        }
+                    )
+                    try {
+                        val result = PartialJsonParser.parse(
+                            updatedChunk.choices.first().delta!!.toolCalls!!.first().function!!.arguments
+                        ) as Map<String, Any>?
+                        if (partialContextData != result && result != null) {
+                            partialContextData = result
+                            if (result.isNotEmpty()) {
+                                val listener = deltaToolCall?.function?.name?.let {
+                                    partialContextListeners[it]
+                                }
+                                if (listener != null) {
+                                    log.trace { "Sending partial context update to listener" }
+                                    listener.invoke(ContextUpdate(result, false))
+                                }
+                            }
+                        }
+                    } catch (e: Throwable) {
+                        log.warn("Failed to parse tool call arguments: ${e.message}")
+                        continue
+                    }
+                } catch (e: Throwable) {
+                    continue
+                }
+            }
+        }
+
+        llmProvider.streamChatCompletion(request, directive).collect {
+            chunks.add(it)
+            if (deltaRole == null) {
+                deltaRole = it.choices.firstOrNull()?.delta?.role
+            }
+            if (deltaToolCall == null) {
+                deltaToolCall = it.choices.firstOrNull()?.delta?.toolCalls?.firstOrNull()
+            }
+
+            if (it.choices.firstOrNull()?.delta?.toolCalls != null) {
+                fullText.append(
+                    it.choices.firstOrNull()?.delta?.toolCalls?.firstOrNull()?.function?.arguments ?: ""
+                )
+                if (fullText.isEmpty()) {
+                    return@collect
+                }
+            } else {
+                fullText.append(it.choices.firstOrNull()?.delta?.content ?: "")
+                //todo: \n is a condition EditText needs, not general purpose
+                if (it.choices.firstOrNull()?.delta?.content?.contains("\n") in setOf(null, false)) {
+                    return@collect //wait till new line to progress streaming edit
+                }
+            }
+
+            chunkProcessingChannel.send(it)
+        }
+
+        chunkProcessingChannel.close()
+        processingJob.join()
+
+        return toChatCompletion(deltaRole!!, deltaToolCall, chunks, fullText.toString(), promptSettings.editMode)
     }
 
     private fun getMessages(): List<ChatMessage> {

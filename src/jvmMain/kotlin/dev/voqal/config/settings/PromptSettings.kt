@@ -21,7 +21,8 @@ data class PromptSettings(
     val functionCalling: FunctionCalling = FunctionCalling.MARKDOWN,
     val separateInitialUserMessage: Boolean = false,
     val editMode: Boolean = false,
-    val toolChoice: ToolChoice = ToolChoice.NONE
+    val toolChoice: ToolChoice = ToolChoice.NONE,
+    val continueConversion: Boolean = true
 ) : ConfigurableSettings {
 
     /**
@@ -45,7 +46,8 @@ data class PromptSettings(
         functionCalling = FunctionCalling.lenientValueOf(json.getString("functionCalling", FunctionCalling.MARKDOWN.name)),
         separateInitialUserMessage = json.getBoolean("separateInitialUserMessage", false),
         editMode = json.getBoolean("editMode", false),
-        toolChoice = ToolChoice.lenientValueOf(json.getString("toolChoice", ToolChoice.NONE.name))
+        toolChoice = ToolChoice.lenientValueOf(json.getString("toolChoice", ToolChoice.NONE.name)),
+        continueConversion = json.getBoolean("continueConversion", true)
     )
 
     override fun toJson(): JsonObject {
@@ -68,6 +70,7 @@ data class PromptSettings(
             put("separateInitialUserMessage", separateInitialUserMessage)
             put("editMode", editMode)
             put("toolChoice", toolChoice.name)
+            put("continueConversion", continueConversion)
         }
     }
 

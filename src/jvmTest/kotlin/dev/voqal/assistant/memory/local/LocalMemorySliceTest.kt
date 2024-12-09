@@ -41,8 +41,7 @@ class LocalMemorySliceTest {
             override fun getAiProvider(): AiProvider {
                 val client = AiProvidersClient(project)
 
-                val streamFile =
-                    File("C:\\Users\\Brandon\\IdeaProjects\\voqal-framework\\src\\jvmTest\\resources\\streaming\\gpt-4o_single_tool_call.jsonl")
+                val streamFile = File("src/jvmTest/resources/streaming/gpt-4o_single_tool_call.jsonl")
                 client.addLlmProvider(object : LlmProvider {
                     override val name: String = "none"
 

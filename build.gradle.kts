@@ -25,6 +25,7 @@ repositories {
     mavenCentral()
     maven("https://s01.oss.sonatype.org/content/repositories/releases/")
     maven("https://www.jetbrains.com/intellij-repository/releases/")
+    maven("https://packages.jetbrains.team/maven/p/ij/intellij-dependencies/")
 }
 
 dependencies {
@@ -121,34 +122,42 @@ kotlin {
                 implementation(libs.snakeyaml)
                 implementation("io.github.funnysaltyfish:partial-json-parser:1.0.2")
                 implementation("io.github.oshai:kotlin-logging:7.0.3")
-                implementation("com.jetbrains.intellij.platform:diagnostic:242.23726.103") {
+
+                val intellijVersion = "242.23726.103"
+                implementation("com.jetbrains.intellij.platform:diagnostic:$intellijVersion") {
                     isTransitive = false
                 }
-                implementation("com.jetbrains.intellij.platform:code-style:242.23726.103") {
+                implementation("com.jetbrains.intellij.platform:code-style:$intellijVersion") {
                     isTransitive = false
                 }
-                implementation("com.jetbrains.intellij.platform:core:242.23726.103") {
+                implementation("com.jetbrains.intellij.platform:core:$intellijVersion") {
                     isTransitive = false
                 }
-                implementation("com.jetbrains.intellij.platform:diff:242.23726.103") {
+                implementation("com.jetbrains.intellij.platform:diff:$intellijVersion") {
                     isTransitive = false
                 }
-                implementation("com.jetbrains.intellij.platform:diff-impl:242.23726.103") {
+                implementation("com.jetbrains.intellij.platform:diff-impl:$intellijVersion") {
                     isTransitive = false
                 }
-                implementation("com.jetbrains.intellij.platform:editor:242.23726.103") {
+                implementation("com.jetbrains.intellij.platform:editor:$intellijVersion") {
                     isTransitive = false
                 }
-                implementation("com.jetbrains.intellij.platform:extensions:242.23726.103") {
+                implementation("com.jetbrains.intellij.platform:extensions:$intellijVersion") {
                     isTransitive = false
                 }
-                implementation("com.jetbrains.intellij.platform:util:242.23726.103") {
+                implementation("com.jetbrains.intellij.platform:util:$intellijVersion") {
                     isTransitive = false
                 }
-                implementation("com.jetbrains.intellij.platform:util-base:242.23726.103") {
+                implementation("com.jetbrains.intellij.platform:util-base:$intellijVersion") {
                     isTransitive = false
                 }
-                implementation("com.jetbrains.intellij.platform:util-diff:242.23726.103") {
+                implementation("com.jetbrains.intellij.platform:util-diff:$intellijVersion") {
+                    isTransitive = false
+                }
+                implementation("com.jetbrains.intellij.platform:util-rt:$intellijVersion") {
+                    isTransitive = false
+                }
+                implementation("org.jetbrains.intellij.deps.fastutil:intellij-deps-fastutil:8.5.13") {
                     isTransitive = false
                 }
             }

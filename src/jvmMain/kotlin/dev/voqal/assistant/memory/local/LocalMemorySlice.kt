@@ -206,18 +206,20 @@ class LocalMemorySlice(
                 messageContent.toString()
             }
             messageList.add(completion.choices.first().message)
-            val toolCalled = completion.choices.first().message.toolCalls?.firstOrNull() as ToolCall.Function?
-            if (toolCalled != null) {
-                val voqalTool = project.service<VoqalToolService>().getAvailableTools()[toolCalled.function.name]
-                if (voqalTool?.manualConfirm != true) {
-                    log.debug { "Auto-confirming tool call: ${toolCalled.function.name}" }
-                    messageList.add(
-                        ChatMessage(
-                            role = ChatRole.Tool,
-                            messageContent = TextContent(content = "success"),
-                            toolCallId = toolCalled.id
+            if (completion.choices.first().message.toolCalls?.isNotEmpty() == true) { //todo: more detail tool responses
+                completion.choices.first().message.toolCalls!!.forEach { it ->
+                    val toolCalled = it as ToolCall.Function
+                    val voqalTool = project.service<VoqalToolService>().getAvailableTools()[toolCalled.function.name]
+                    if (voqalTool?.manualConfirm != true) {
+                        log.debug { "Auto-confirming tool call: ${toolCalled.function.name}" }
+                        messageList.add(
+                            ChatMessage(
+                                role = ChatRole.Tool,
+                                messageContent = TextContent(content = "success"),
+                                toolCallId = toolCalled.id
+                            )
                         )
-                    )
+                    }
                 }
             }
 

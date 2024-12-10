@@ -123,7 +123,7 @@ kotlin {
                 implementation("io.github.funnysaltyfish:partial-json-parser:1.0.2")
                 implementation("io.github.oshai:kotlin-logging:7.0.3")
 
-                val intellijVersion = "242.23726.103"
+                val intellijVersion = "242.24807.21"
                 implementation("com.jetbrains.intellij.platform:diagnostic:$intellijVersion") {
                     isTransitive = false
                 }

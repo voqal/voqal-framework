@@ -157,7 +157,7 @@ kotlin {
                 implementation("com.jetbrains.intellij.platform:util-rt:$intellijVersion") {
                     isTransitive = false
                 }
-                implementation("org.jetbrains.intellij.deps.fastutil:intellij-deps-fastutil:8.5.13") {
+                implementation("org.jetbrains.intellij.deps.fastutil:intellij-deps-fastutil:8.5.14-jb1") {
                     isTransitive = false
                 }
             }

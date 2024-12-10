@@ -421,6 +421,17 @@ object ResponseParser {
                     argumentsOrNull = json.getJsonObject("parameters").toString()
                 )
             )
+        } else if (json.fieldNames().size == 1) {
+            val name = json.fieldNames().first()
+            return ToolCallChunk(
+                index = 0,
+                type = "function",
+                id = ToolId(name),
+                function = FunctionCall(
+                    nameOrNull = name,
+                    argumentsOrNull = json.getJsonObject(name).toString()
+                )
+            )
         } else {
             return null
         }

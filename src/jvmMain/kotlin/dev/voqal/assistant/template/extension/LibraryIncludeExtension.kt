@@ -1,5 +1,6 @@
 package dev.voqal.assistant.template.extension
 
+import dev.voqal.assistant.template.VoqalTemplateEngine.Companion.libraryDir
 import io.pebbletemplates.pebble.PebbleEngine
 import io.pebbletemplates.pebble.error.PebbleException
 import io.pebbletemplates.pebble.extension.AbstractExtension
@@ -28,7 +29,7 @@ class LibraryIncludeExtension : AbstractExtension() {
 
         override fun getTag() = "include"
 
-        override fun parse(token: Token?, parser: Parser?): RenderableNode? {
+        override fun parse(token: Token?, parser: Parser?): RenderableNode {
             val stream = parser?.stream
             val lineNumber = token?.lineNumber
             stream?.next()
@@ -70,7 +71,6 @@ class LibraryIncludeExtension : AbstractExtension() {
         }
 
         private fun loadAndProcessTemplate(templateName: String): String {
-            val libraryDir = File("C:\\Users\\Brandon\\IdeaProjects\\voqal\\library")
             val path = File(libraryDir, templateName).toPath()
             if (!path.normalize().startsWith(libraryDir.toPath())) {
                 throw PebbleException(

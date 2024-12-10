@@ -150,6 +150,7 @@ class MistralAiClient(
     private suspend fun throwIfError(response: HttpResponse) {
         if (response.status.isSuccess()) return
 
+        val response = response.call.save().response
         if (response.status.value == 401) {
             throw AuthenticationException(
                 response.status.value,

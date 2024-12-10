@@ -22,7 +22,8 @@ data class PromptSettings(
     val separateInitialUserMessage: Boolean = false,
     val editMode: Boolean = false,
     val toolChoice: ToolChoice = ToolChoice.NONE,
-    val continueConversion: Boolean = true
+    val continueConversion: Boolean = true,
+    val ephemeralSystemPrompt: Boolean = true
 ) : ConfigurableSettings {
 
     /**
@@ -47,7 +48,8 @@ data class PromptSettings(
         separateInitialUserMessage = json.getBoolean("separateInitialUserMessage", false),
         editMode = json.getBoolean("editMode", false),
         toolChoice = ToolChoice.lenientValueOf(json.getString("toolChoice", ToolChoice.NONE.name)),
-        continueConversion = json.getBoolean("continueConversion", true)
+        continueConversion = json.getBoolean("continueConversion", true),
+        ephemeralSystemPrompt = json.getBoolean("ephemeralSystemPrompt", true)
     )
 
     override fun toJson(): JsonObject {
@@ -71,6 +73,7 @@ data class PromptSettings(
             put("editMode", editMode)
             put("toolChoice", toolChoice.name)
             put("continueConversion", continueConversion)
+            put("ephemeralSystemPrompt", ephemeralSystemPrompt)
         }
     }
 

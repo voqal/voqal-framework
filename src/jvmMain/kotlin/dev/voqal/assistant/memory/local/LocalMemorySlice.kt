@@ -128,6 +128,11 @@ class LocalMemorySlice(
                 )
             }
         } else {
+            if (promptSettings.ephemeralSystemPrompt) {
+                //replace initial system message with new system message
+                messageList[0] = ChatMessage(ChatRole.System, systemPrompt)
+            }
+
             if (addMessage) {
                 if (directive.transcription.isNotEmpty()) {
                     messageList.add(ChatMessage(ChatRole.User, directive.transcription))

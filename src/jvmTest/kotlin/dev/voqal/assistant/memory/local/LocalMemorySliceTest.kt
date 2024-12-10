@@ -89,9 +89,83 @@ class LocalMemorySliceTest {
         val response = memory.addMessage(directive)
         val tools = response.toolCalls
         assertEquals(1, tools.size)
+
         val toolCall = tools.first() as ToolCall.Function
         assertEquals("open_url", toolCall.function.name)
         val args = JsonObject(toolCall.function.arguments)
         assertEquals("https://www.google.com", args.getString("url"))
+    }
+
+    @Test
+    fun multiToolCallTest(): Unit = runBlocking {
+        val project = MockProject()
+        val memory = LocalMemorySlice(project)
+
+        val mockApplication = mock<Application> {
+            on { isUnitTestMode } doReturn true
+        }
+        ApplicationManager.setApplication(mockApplication, project)
+        project.configService = object : MockConfigService(project) {
+            override fun getAiProvider(): AiProvider {
+                val client = AiProvidersClient(project)
+
+                val streamFile = File("src/jvmTest/resources/streaming/gpt-4o_multi_tool_call.jsonl")
+                client.addLlmProvider(object : LlmProvider {
+                    override val name: String = "none"
+
+                    override suspend fun streamChatCompletion(
+                        request: ChatCompletionRequest,
+                        directive: VoqalDirective?
+                    ): Flow<ChatCompletionChunk> {
+                        return streamFile.inputStream().bufferedReader().lineSequence().map {
+                            Json.decodeFromString(ChatCompletionChunk.serializer(), it)
+                        }.asFlow()
+                    }
+
+                    override suspend fun chatCompletion(
+                        request: ChatCompletionRequest,
+                        directive: VoqalDirective?
+                    ): ChatCompletion {
+                        TODO("Not yet implemented")
+                    }
+
+                    override fun getAvailableModelNames(): List<String> {
+                        TODO("Not yet implemented")
+                    }
+
+                    override fun isStreamable() = true
+                    override fun dispose() = Unit
+                })
+                return client
+            }
+        }
+
+        var directive = project.directiveService.createDirective(SpokenTranscript("test", null))
+        directive = directive.copy(
+            contextMap = directive.contextMap.toMutableMap().apply {
+                put(
+                    "assistant", directive.assistant.copy(
+                        languageModelSettings = LanguageModelSettings(),
+                        promptSettings = PromptSettings(
+                            streamCompletions = true,
+                            functionCalling = PromptSettings.FunctionCalling.NATIVE
+                        )
+                    )
+                )
+            }
+        )
+        val response = memory.addMessage(directive)
+        val tools = response.toolCalls
+        assertEquals(2, tools.size)
+
+        val toolCall1 = tools.first() as ToolCall.Function
+        assertEquals("open_url", toolCall1.function.name)
+        val args = JsonObject(toolCall1.function.arguments)
+        assertEquals("https://www.google.com", args.getString("url"))
+
+        val toolCall2 = tools[1] as ToolCall.Function
+        assertEquals("create_tab", toolCall2.function.name)
+        val args2 = JsonObject(toolCall2.function.arguments)
+        assertEquals("https://www.youtube.com", args2.getString("url"))
     }
 }

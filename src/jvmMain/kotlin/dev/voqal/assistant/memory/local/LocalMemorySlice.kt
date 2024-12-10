@@ -279,52 +279,55 @@ class LocalMemorySlice(
     ): ChatCompletion {
         val chunks = mutableListOf<ChatCompletionChunk>()
         var deltaRole: Role? = null
-        val fullText = StringBuilder()
-        var deltaToolCall: ToolCallChunk? = null //todo: support streaming multiple tools
 
-        var partialContextData = mapOf<String, Any>()
+        val fullTexts = mutableMapOf<Int, StringBuilder>()
+        var deltaToolCalls = mutableListOf<ToolCallChunk>()
+        var partialContextData = mutableMapOf<Int, Map<String, Any>>()
+
         val chunkProcessingChannel = Channel<ChatCompletionChunk>(capacity = Channel.UNLIMITED)
         val processingJob = CoroutineScope(Dispatchers.Default).launch {
             for (chunk in chunkProcessingChannel) {
+                deltaToolCalls = deltaToolCalls.map { toolCall ->
+                    val args = fullTexts[toolCall.index]?.toString() ?: return@map toolCall
+                    toolCall.copy(
+                        function = toolCall.function!!.copy(
+                            argumentsOrNull = args
+                        )
+                    )
+                }.toMutableList()
+
                 try {
                     val updatedChunk = chunk.copy(
-                        choices = chunk.choices.map {
-                            if (deltaToolCall != null) {
-                                it.copy(
-                                    delta = it.delta!!.copy(
+                        choices = chunk.choices.map { choice ->
+                            if (deltaToolCalls.isNotEmpty()) {
+                                choice.copy(
+                                    delta = choice.delta!!.copy(
                                         role = deltaRole,
-                                        toolCalls = listOf(
-                                            deltaToolCall!!.copy(
-                                                function = deltaToolCall!!.function!!.copy(
-                                                    argumentsOrNull = fullText.toString()
-                                                )
-                                            )
-                                        )
+                                        toolCalls = deltaToolCalls
                                     )
                                 )
                             } else {
-                                it.copy(
-                                    delta = it.delta!!.copy(
+                                choice.copy(
+                                    delta = choice.delta!!.copy(
                                         role = deltaRole,
-                                        content = fullText.toString()
+                                        content = fullTexts[-1]?.toString()
                                     )
                                 )
                             }
                         }
                     )
                     try {
-                        val result = PartialJsonParser.parse(
-                            updatedChunk.choices.first().delta!!.toolCalls!!.first().function!!.arguments
-                        ) as Map<String, Any>?
-                        if (partialContextData != result && result != null) {
-                            partialContextData = result
-                            if (result.isNotEmpty()) {
-                                val listener = deltaToolCall?.function?.name?.let {
-                                    partialContextListeners[it]
-                                }
-                                if (listener != null) {
-                                    log.trace { "Sending partial context update to listener" }
-                                    listener.invoke(ContextUpdate(result, false))
+                        updatedChunk.choices.first().delta?.toolCalls?.forEach { toolCall ->
+                            val args = toolCall.function?.argumentsOrNull ?: return@forEach
+                            val result = PartialJsonParser.parse(args) as Map<String, Any>?
+                            if (partialContextData[toolCall.index] != result && result != null) {
+                                partialContextData[toolCall.index] = result
+                                if (result.isNotEmpty()) {
+                                    val listener = toolCall.function?.name?.let { partialContextListeners[it] }
+                                    if (listener != null) {
+                                        log.trace { "Sending partial context update to listener for tool call index ${toolCall.index}" }
+                                        listener.invoke(ContextUpdate(result, false))
+                                    }
                                 }
                             }
                         }
@@ -332,43 +335,54 @@ class LocalMemorySlice(
                         log.warn("Failed to parse tool call arguments: ${e.message}")
                         continue
                     }
-                } catch (e: Throwable) {
+                } catch (_: Throwable) {
                     continue
                 }
             }
         }
 
-        llmProvider.streamChatCompletion(request, directive).collect {
-            chunks.add(it)
+        llmProvider.streamChatCompletion(request, directive).collect { chunk ->
+            chunks.add(chunk)
             if (deltaRole == null) {
-                deltaRole = it.choices.firstOrNull()?.delta?.role
-            }
-            if (deltaToolCall == null) {
-                deltaToolCall = it.choices.firstOrNull()?.delta?.toolCalls?.firstOrNull()
+                deltaRole = chunk.choices.firstOrNull()?.delta?.role
             }
 
-            if (it.choices.firstOrNull()?.delta?.toolCalls != null) {
-                fullText.append(
-                    it.choices.firstOrNull()?.delta?.toolCalls?.firstOrNull()?.function?.arguments ?: ""
-                )
-                if (fullText.isEmpty()) {
-                    return@collect
+            val toolCalls = chunk.choices.firstOrNull()?.delta?.toolCalls
+            if (toolCalls != null) {
+                toolCalls.forEach { toolCall ->
+                    val index = toolCall.index
+                    if (!fullTexts.containsKey(index)) {
+                        fullTexts[index] = StringBuilder()
+                        deltaToolCalls.add(toolCall.copy())
+                    }
+                    fullTexts[index]?.append(toolCall.function?.arguments ?: "")
                 }
             } else {
-                fullText.append(it.choices.firstOrNull()?.delta?.content ?: "")
+                val content = chunk.choices.firstOrNull()?.delta?.content ?: ""
+                if (fullTexts.containsKey(-1)) {
+                    fullTexts[-1]?.append(content)
+                } else {
+                    fullTexts[-1] = StringBuilder().append(content)
+                }
                 //todo: \n is a condition EditText needs, not general purpose
-                if (it.choices.firstOrNull()?.delta?.content?.contains("\n") in setOf(null, false)) {
+                if (!content.contains("\n")) {
                     return@collect //wait till new line to progress streaming edit
                 }
             }
 
-            chunkProcessingChannel.send(it)
+            chunkProcessingChannel.send(chunk)
         }
 
         chunkProcessingChannel.close()
         processingJob.join()
 
-        return toChatCompletion(deltaRole!!, deltaToolCall, chunks, fullText.toString(), promptSettings.editMode)
+        return toChatCompletion(
+            deltaRole!!,
+            deltaToolCalls,
+            chunks,
+            fullTexts[-1]?.toString() ?: "",
+            promptSettings.editMode
+        )
     }
 
     private fun getMessages(): List<ChatMessage> {
@@ -377,40 +391,36 @@ class LocalMemorySlice(
 
     private fun toChatCompletion(
         role: Role,
-        toolCall: ToolCallChunk?,
+        toolCalls: List<ToolCallChunk>,
         chunks: List<ChatCompletionChunk>,
         fullText: String,
         editMode: Boolean
     ): ChatCompletion {
         var messageContent: Content? = null
-        var toolCall = toolCall
+        var toolCalls = toolCalls
         val chunk = chunks.last()
         if (editMode) {
             messageContent = TextContent(content = fullText)
-        } else if (toolCall == null) {
+        } else if (toolCalls.isEmpty()) {
             val toolCallChunk = ResponseParser.parseToolCallChunk(fullText)
             if (toolCallChunk == null) {
                 //default to answer_question tool
-                toolCall = ToolCallChunk(
-                    index = 0,
-                    type = "function",
-                    id = ToolId("answer_question"),
-                    function = FunctionCall(
-                        nameOrNull = "answer_question",
-                        argumentsOrNull = JsonObject().apply {
-                            put("text", fullText)
-                        }.toString()
+                toolCalls = listOf(
+                    ToolCallChunk(
+                        index = 0,
+                        type = "function",
+                        id = ToolId("answer_question"),
+                        function = FunctionCall(
+                            nameOrNull = "answer_question",
+                            argumentsOrNull = JsonObject().apply {
+                                put("text", fullText)
+                            }.toString()
+                        )
                     )
                 )
             } else {
-                toolCall = toolCallChunk
+                toolCalls = listOf(toolCallChunk)
             }
-        } else {
-            toolCall = toolCall.copy(
-                function = toolCall.function!!.copy(
-                    argumentsOrNull = fullText
-                )
-            )
         }
         return ChatCompletion(
             id = chunk.id,
@@ -422,13 +432,13 @@ class LocalMemorySlice(
                     message = ChatMessage(
                         role = role,
                         messageContent = messageContent,
-                        toolCalls = if (toolCall != null) {
-                            listOf(toolCall.let {
+                        toolCalls = if (toolCalls.isNotEmpty()) {
+                            toolCalls.map {
                                 ToolCall.Function(
                                     id = it.id!!,
                                     function = it.function!!
                                 )
-                            })
+                            }
                         } else null
                     )
                 )

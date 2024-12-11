@@ -32,7 +32,7 @@ class SharedAudioCapture(private val project: Project) {
         const val BUFFER_SIZE = 1532 //24khz -> 16khz = 512 samples
         const val SAMPLE_RATE = 24000
         val FORMAT = AudioFormat(SAMPLE_RATE.toFloat(), 16, 1, true, false)
-        val EMPTY_BUFFER = ByteArray(BUFFER_SIZE)
+        val EMPTY_BUFFER = ByteArray(BUFFER_SIZE) { -1 }
 
         @JvmStatic
         fun convertBytesToShorts(audioBytes: ByteArray): ShortArray {

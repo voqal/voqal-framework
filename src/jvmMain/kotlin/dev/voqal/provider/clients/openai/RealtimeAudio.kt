@@ -40,7 +40,16 @@ class RealtimeAudio(private val project: Project, convoId: String) {
         audioWrote.set(true)
         channel.trySend(project.scope.launch(start = CoroutineStart.LAZY) {
             try {
-                val audioData = Base64.getDecoder().decode(json.getString("delta"))
+                val data = if (json.containsKey("delta")) {
+                    json.getString("delta") //OpenAI Realtime API
+                } else if (json.containsKey("serverContent")) {
+                    json.getJsonObject("serverContent").getJsonObject("modelTurn") //Gemini Live
+                        .getJsonArray("parts") //todo: multi-part?
+                        .getJsonObject(0).getJsonObject("inlineData").getString("data")
+                } else {
+                    throw IllegalStateException("Unknown audio data format")
+                }
+                val audioData = Base64.getDecoder().decode(data)
                 audioBytesWritten.addAndGet(audioData.size.toLong())
                 pos.write(audioData)
             } catch (e: Throwable) {
@@ -59,6 +68,14 @@ class RealtimeAudio(private val project: Project, convoId: String) {
     }
 
     fun finishAudio() {
+        if (audioFinished.get()) {
+            log.debug { "Audio has already been finished" }
+            return
+        } else if (!audioWrote.get()) {
+            log.debug { "No audio data has been written" }
+            return
+        }
+
         channel.trySend(project.scope.launch(start = CoroutineStart.LAZY) {
             try {
                 pos.write(SharedAudioCapture.EMPTY_BUFFER)

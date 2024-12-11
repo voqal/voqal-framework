@@ -1,9 +1,8 @@
 package dev.voqal.assistant.memory.local
 
-import com.aallam.openai.api.chat.ChatCompletion
-import com.aallam.openai.api.chat.ChatCompletionChunk
-import com.aallam.openai.api.chat.ChatCompletionRequest
-import com.aallam.openai.api.chat.ToolCall
+import com.aallam.openai.api.chat.*
+import com.aallam.openai.api.core.Role
+import com.aallam.openai.api.model.ModelId
 import com.intellij.openapi.application.Application
 import com.intellij.openapi.application.ApplicationManager
 import dev.voqal.assistant.VoqalDirective
@@ -27,6 +26,84 @@ import org.mockito.kotlin.mock
 import java.io.File
 
 class LocalMemorySliceTest {
+
+    @Test
+    fun invalidAnswerQuestionArgs(): Unit = runBlocking {
+        val project = MockProject()
+        val memory = LocalMemorySlice(project)
+
+        val mockApplication = mock<Application> {
+            on { isUnitTestMode } doReturn true
+        }
+        ApplicationManager.setApplication(mockApplication, project)
+        project.configService = object : MockConfigService(project) {
+            override fun getAiProvider(): AiProvider {
+                val client = AiProvidersClient(project)
+
+                client.addLlmProvider(object : LlmProvider {
+                    override val name: String = "none"
+
+                    override suspend fun chatCompletion(
+                        request: ChatCompletionRequest,
+                        directive: VoqalDirective?
+                    ): ChatCompletion {
+                        return ChatCompletion(
+                            id = "id",
+                            created = System.currentTimeMillis(),
+                            model = ModelId("test"),
+                            choices = listOf(
+                                ChatChoice(
+                                    index = 0,
+                                    message = ChatMessage(
+                                        role = Role.Function,
+                                        messageContent = null,
+                                        toolCalls = listOf(
+                                            ToolCall.Function(
+                                                id = ToolId("answer_question"),
+                                                function = FunctionCall(
+                                                    nameOrNull = "answer_question",
+                                                    argumentsOrNull = "Hello world!"
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    }
+
+                    override fun getAvailableModelNames(): List<String> {
+                        TODO("Not yet implemented")
+                    }
+
+                    override fun dispose() = Unit
+                })
+                return client
+            }
+        }
+
+        var directive = project.directiveService.createDirective(SpokenTranscript("test", null))
+        directive = directive.copy(
+            contextMap = directive.contextMap.toMutableMap().apply {
+                put(
+                    "assistant", directive.assistant.copy(
+                        languageModelSettings = LanguageModelSettings(),
+                        promptSettings = PromptSettings(
+                            functionCalling = PromptSettings.FunctionCalling.NATIVE
+                        )
+                    )
+                )
+            }
+        )
+        val response = memory.addMessage(directive)
+        val tools = response.toolCalls
+        assertEquals(1, tools.size)
+
+        val toolCall = tools.first() as ToolCall.Function
+        assertEquals("answer_question", toolCall.function.name)
+        val args = JsonObject(toolCall.function.arguments)
+        assertEquals("Hello world!", args.getString("text"))
+    }
 
     @Test
     fun singleToolCallTest(): Unit = runBlocking {

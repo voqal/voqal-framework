@@ -17,6 +17,7 @@ import dev.voqal.config.settings.PromptSettings
 import dev.voqal.config.settings.PromptSettings.FunctionCalling
 import dev.voqal.provider.LlmProvider
 import dev.voqal.services.*
+import io.vertx.core.json.DecodeException
 import io.vertx.core.json.JsonObject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -188,6 +189,35 @@ class LocalMemorySlice(
             val responseTime = System.currentTimeMillis()
             aiProvider.asObservabilityProvider().logLlmLatency(responseTime - requestTime)
 
+            //gpt-4o seems to have trouble remembering to use json when using answer_question
+            if (completion.choices.size == 1 && completion.choices.first().message.toolCalls?.size == 1) {
+                val functionCall = completion.choices.first().message.toolCalls!!.first() as ToolCall.Function
+                if (functionCall.function.name == "answer_question") {
+                    try {
+                        JsonObject(functionCall.function.arguments)
+                    } catch (_: DecodeException) {
+                        log.debug { "Converting answer_question to json" }
+                        completion = completion.copy(
+                            choices = listOf(
+                                completion.choices.first().copy(
+                                    message = completion.choices.first().message.copy(
+                                        toolCalls = listOf(
+                                            functionCall.copy(
+                                                function = functionCall.function.copy(
+                                                    argumentsOrNull = JsonObject().apply {
+                                                        put("text", functionCall.function.arguments)
+                                                    }.toString()
+                                                )
+                                            )
+                                        )
+                                    )
+                                )
+                            )
+                        )
+                    }
+                }
+            }
+
             try {
                 //todo: could just use JsonObject()
                 if (completion.choices.first().message.toolCalls != null) {
@@ -197,6 +227,8 @@ class LocalMemorySlice(
                     if (listener != null) {
                         log.debug { "Sending final context update to listener" }
                         listener.invoke(ContextUpdate(result, true))
+                    } else {
+                        log.debug { "No listener found for tool call: ${toolCall.function.name}" }
                     }
                 }
             } catch (e: Throwable) {//todo: ```json {} ```

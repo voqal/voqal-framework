@@ -57,8 +57,7 @@ class GeminiLiveClient(
     private val realtimeAudioMap = mutableMapOf<String, RealtimeAudio>()
     private val realtimeToolMap = mutableMapOf<String, RealtimeTool>()
     private var serverVad = false
-    private var speechStartTime = -1L
-    private var speechEndTime = -1L
+    private var clientRequestEndTime = -1L
     private var currentInputTokens = 0
     private var setupComplete = false
     private var convoListener: ((String) -> Unit)? = null
@@ -243,10 +242,10 @@ class GeminiLiveClient(
                                         continue
                                     }
 
-                                    if (speechEndTime != -1L) {
+                                    if (clientRequestEndTime != -1L) {
                                         project.service<VoqalConfigService>().getAiProvider().asObservabilityProvider()
-                                            .logStmLatency(System.currentTimeMillis() - speechEndTime)
-                                        speechEndTime = -1L
+                                            .logStmLatency(System.currentTimeMillis() - clientRequestEndTime)
+                                        clientRequestEndTime = -1L
                                     }
 
                                     val parts = json.getJsonObject("serverContent").getJsonObject("modelTurn")
@@ -273,10 +272,10 @@ class GeminiLiveClient(
                                     log.debug { "Setup complete" }
                                     setupComplete = true
                                 } else if (json.containsKey("toolCall")) {
-                                    if (speechEndTime != -1L) {
+                                    if (clientRequestEndTime != -1L) {
                                         project.service<VoqalConfigService>().getAiProvider().asObservabilityProvider()
-                                            .logStmLatency(System.currentTimeMillis() - speechEndTime)
-                                        speechEndTime = -1L
+                                            .logStmLatency(System.currentTimeMillis() - clientRequestEndTime)
+                                        clientRequestEndTime = -1L
                                     }
 
                                     log.debug { json }
@@ -397,7 +396,7 @@ class GeminiLiveClient(
             })
             put("turn_complete", true)
         })
-        speechEndTime = System.currentTimeMillis()
+        clientRequestEndTime = System.currentTimeMillis()
         session.send(Frame.Text(json.toString()))
 
         val convoResponse = promise.future().coAwait()
@@ -444,26 +443,12 @@ class GeminiLiveClient(
         if (!setupComplete) return
         if (serverVad) {
             audioQueue.put(data)
-//            return
         }
 
-        if (detection.speechDetected.get()) {
-            speechStartTime = System.currentTimeMillis()
-//            stopCurrentVoice()
-//            //todo: response.cancel
-
+        if (detection.voiceDetected.get()) {
             capturing = true
-//            detection.framesBeforeVoiceDetected.forEach {
-//                audioQueue.put(it.data)
-//            }
-//            audioQueue.put(data)
-        } else if (capturing && !detection.speechDetected.get()) {
-            speechEndTime = System.currentTimeMillis()
-//            capturing = false
-//            audioQueue.put(SharedAudioCapture.EMPTY_BUFFER)
-
-//            project.service<VoqalConfigService>().getAiProvider().asObservabilityProvider()
-//                .logStmCost(calculateSttCost((speechEndTime - speechStartTime) / 1000.0))
+        } else if (capturing && !detection.voiceDetected.get()) {
+            clientRequestEndTime = System.currentTimeMillis()
         }
     }
 

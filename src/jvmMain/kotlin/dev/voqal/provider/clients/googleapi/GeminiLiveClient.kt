@@ -445,9 +445,10 @@ class GeminiLiveClient(
             audioQueue.put(data)
         }
 
-        if (detection.voiceDetected.get()) {
+        if (!capturing && detection.voiceDetected.get()) {
             capturing = true
         } else if (capturing && !detection.voiceDetected.get()) {
+            capturing = false
             clientRequestEndTime = System.currentTimeMillis()
         }
     }

@@ -18,7 +18,7 @@ class RealtimeTool(
     private var executionLog = JsonArray()
 
     init {
-        log.info("Initializing RealtimeTool. Convo id: $convoId")
+        log.info { "Initializing RealtimeTool. Convo id: $convoId" }
     }
 
     fun executeTool(json: JsonObject) {
@@ -55,7 +55,11 @@ class RealtimeTool(
                             put("id", callId)
                             put("name", tool)
                             put("response", JsonObject().apply {
-                                put("output", it.toString())
+                                put("name", tool)
+                                put("content", JsonObject().apply {
+                                    put("status", "success")
+                                    put("output", it.toString())
+                                })
                             })
                         })
                     })

@@ -315,7 +315,7 @@ class GeminiLiveClient(
             } catch (_: InterruptedException) {
             } catch (_: InterruptedIOException) {
             } catch (e: Exception) {
-                log.error(e) { "Error processing audio: ${e.message}" }
+                log.error(e) { "Error processing read: ${e.message}" }
             } finally {
                 if (!disposed) {
                     project.scope.launch {
@@ -369,7 +369,7 @@ class GeminiLiveClient(
             } catch (_: InterruptedException) {
             } catch (_: CancellationException) {
             } catch (e: Exception) {
-                log.error(e) { "Error processing audio: ${e.message}" }
+                log.error(e) { "Error processing write: ${e.message}" }
             }
         }
     }

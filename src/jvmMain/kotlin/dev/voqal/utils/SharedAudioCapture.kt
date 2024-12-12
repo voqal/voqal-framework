@@ -278,7 +278,7 @@ class SharedAudioCapture(private val project: Project) {
                         val updateListener = (testMode && listener.isTestListener()) ||
                                 (!testMode && !listener.isTestListener())
                         if (updateListener) {
-                            if (testMode && !listener.isTestListener()) {
+                            if (!testMode && !listener.isTestListener()) {
                                 if ((listener !is VadProvider && listener !is WakeProvider) && listener !== modeProvider) {
                                     continue //ignore audio, mode provider is handling
                                 }

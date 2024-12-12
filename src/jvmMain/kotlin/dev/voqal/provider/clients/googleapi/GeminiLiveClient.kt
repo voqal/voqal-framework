@@ -96,9 +96,10 @@ class GeminiLiveClient(
         setupComplete = false
 
         try {
-            socket = asyncClient.prepareGet("$wssProviderUrl?key=$providerKey")
+            asyncClient.prepareGet("$wssProviderUrl?key=$providerKey")
                 .execute(WebSocketUpgradeHandler.Builder().addWebSocketListener(this).build()).get()
             log.debug { "Connected to Gemini Live" }
+
             writeThread = Thread(writeLoop(), "GeminiLiveClient-Write").apply { start() }
             updateSessionThread = Thread(updateSessionLoop(), "GeminiLiveClient-UpdateSession").apply { start() }
         } catch (e: Exception) {
@@ -167,6 +168,7 @@ class GeminiLiveClient(
         if (newSession.toString() == activeSession.toString()) return
 
         log.debug { "Updating realtime session prompt" }
+        activeSession.mergeIn(newSession)
         runBlocking {
             socket!!.sendCloseFrame().await()
         }
@@ -259,6 +261,7 @@ class GeminiLiveClient(
     }
 
     override fun onOpen(websocket: WebSocket) {
+        socket = websocket
         setup()
     }
 

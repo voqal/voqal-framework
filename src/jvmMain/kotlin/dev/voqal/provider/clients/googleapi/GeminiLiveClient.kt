@@ -18,41 +18,45 @@ import io.ktor.client.*
 import io.ktor.client.plugins.*
 import io.ktor.client.plugins.websocket.*
 import io.ktor.client.request.*
+import io.ktor.util.*
 import io.ktor.utils.io.CancellationException
 import io.ktor.websocket.*
+import io.pebbletemplates.pebble.error.PebbleException
 import io.vertx.core.Promise
 import io.vertx.core.json.JsonArray
 import io.vertx.core.json.JsonObject
 import io.vertx.kotlin.coroutines.coAwait
 import kotlinx.coroutines.*
-import kotlinx.coroutines.channels.ClosedReceiveChannelException
+import kotlinx.coroutines.channels.ChannelResult
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.SendChannel
+import kotlinx.coroutines.selects.SelectClause2
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
-import java.io.InterruptedIOException
+import org.asynchttpclient.Dsl.*
+import org.asynchttpclient.ws.WebSocket
+import org.asynchttpclient.ws.WebSocketListener
+import org.asynchttpclient.ws.WebSocketUpgradeHandler
 import java.io.StringWriter
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
+import kotlin.coroutines.CoroutineContext
 
 class GeminiLiveClient(
     override val name: String,
     private val project: Project,
     private val providerKey: String,
     private val modelName: String
-) : LlmProvider, StmProvider, SharedAudioCapture.AudioDataListener {
+) : LlmProvider, StmProvider, SharedAudioCapture.AudioDataListener, WebSocketListener {
 
     private val log = project.getVoqalLogger(this::class)
     private var capturing = false
     private val wssProviderUrl =
         "wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContent"
-    private val wssHeaders: Map<String, String> = emptyMap()
-    private lateinit var session: DefaultClientWebSocketSession
-    private lateinit var readThread: Thread
     private lateinit var writeThread: Thread
+    private lateinit var updateSessionThread: Thread
     private val audioQueue = LinkedBlockingQueue<ByteArray>()
-    private val client = HttpClient {
-        install(HttpTimeout) { requestTimeoutMillis = 30_000 }
-        install(WebSockets)
-    }
+    private val activeSession = JsonObject()
     private var disposed: Boolean = false
     private val realtimeAudioMap = mutableMapOf<String, RealtimeAudio>()
     private val realtimeToolMap = mutableMapOf<String, RealtimeTool>()
@@ -63,9 +67,13 @@ class GeminiLiveClient(
     private var convoListener: ((String) -> Unit)? = null
     private var convoId = 0
     private var textResponse: StringWriter? = null
+    private var socket: WebSocket? = null
+    private val asyncClient = asyncHttpClient(config().setWebSocketMaxFrameSize(Integer.MAX_VALUE))
+    private var turnComplete = true
 
     init {
         //todo: gemini live only supports server vad
+        log.info { "Using server VAD" }
         serverVad = true
 
         restartConnection()
@@ -75,49 +83,24 @@ class GeminiLiveClient(
     private fun restartConnection(): Boolean {
         ThreadingAssertions.assertBackgroundThread()
         log.debug { "Establishing new Gemini Live session" }
-        if (::readThread.isInitialized) {
-            readThread.interrupt()
-            readThread.join()
-        }
         if (::writeThread.isInitialized) {
             writeThread.interrupt()
             writeThread.join()
         }
+        if (::updateSessionThread.isInitialized) {
+            updateSessionThread.interrupt()
+            updateSessionThread.join()
+        }
         audioQueue.clear()
-//        responseQueue.clear()
         currentInputTokens = 0
         setupComplete = false
 
         try {
-            if (::session.isInitialized) {
-                session.cancel()
-            }
-            session = runBlocking {
-                //establish connection, 3 attempts
-                var session: DefaultClientWebSocketSession? = null
-                for (i in 0..2) {
-                    try {
-                        withTimeout(10_000) {
-                            session = client.webSocketSession("$wssProviderUrl?key=$providerKey") {
-                                wssHeaders.forEach { header(it.key, it.value) }
-                            }
-                        }
-                    } catch (e: TimeoutCancellationException) {
-                        if (i == 2) {
-                            throw e
-                        } else {
-                            log.warn { "Failed to connect to Gemini Live. Retrying..." }
-                        }
-                    }
-                    if (session != null) break
-                }
-                session!!
-            }
+            socket = asyncClient.prepareGet("$wssProviderUrl?key=$providerKey")
+                .execute(WebSocketUpgradeHandler.Builder().addWebSocketListener(this).build()).get()
             log.debug { "Connected to Gemini Live" }
-            readThread = Thread(readLoop(), "GeminiLiveClient-Read").apply { start() }
             writeThread = Thread(writeLoop(), "GeminiLiveClient-Write").apply { start() }
-
-            setup()
+            updateSessionThread = Thread(updateSessionLoop(), "GeminiLiveClient-UpdateSession").apply { start() }
         } catch (e: Exception) {
             val warnMessage = if (e.message != null) {
                 "Gemini Live connection failed: ${e.message}"
@@ -128,6 +111,68 @@ class GeminiLiveClient(
             return false
         }
         return true
+    }
+
+    private fun updateSession() {
+        if (!setupComplete || !turnComplete) return //wait till ready
+        val configService = project.service<VoqalConfigService>()
+        val promptName = configService.getActivePromptName()
+        if (configService.getConfig().promptLibrarySettings.prompts.none { it.promptName == promptName }) {
+            log.warn { "Prompt $promptName not found in prompt library" }
+            return
+        }
+
+        val toolService = project.service<VoqalToolService>()
+        var nopDirective = project.service<VoqalDirectiveService>().createDirective(
+            transcription = SpokenTranscript("n/a", null),
+            promptName = promptName,
+            usingAudioModality = true
+        )
+        nopDirective = nopDirective.copy(
+            contextMap = nopDirective.contextMap.toMutableMap().apply {
+                put(
+                    "assistant", nopDirective.assistant.copy(
+                        availableActions = toolService.getAvailableTools().values,
+                        promptSettings = nopDirective.assistant.promptSettings?.copy(
+                            functionCalling = FunctionCalling.NATIVE
+                        )
+                    )
+                )
+            }
+        )
+        val prompt = nopDirective.toMarkdown()
+        val tools = nopDirective.assistant.availableActions
+            .filter { it.isVisible(nopDirective) }
+            .filter {
+                //todo: dynamic
+                if (nopDirective.assistant.promptSettings!!.promptName.lowercase() == "edit mode") {
+                    it.name in setOf("edit_text", "looks_good", "cancel")
+                } else {
+                    it.name != "answer_question"
+                }
+            } //todo: check tools
+
+        val newSession = JsonObject().put("clientContent", JsonObject().apply {
+            put("turns", JsonArray().apply {
+                add(JsonObject().apply {
+                    put("parts", JsonArray().apply {
+                        add(JsonObject().apply {
+                            put("text", prompt)
+                        })
+                    })
+                    put("role", "model")
+                })
+            })
+        })
+        if (newSession.toString() == activeSession.toString()) return
+
+        log.debug { "Updating realtime session prompt" }
+        runBlocking {
+            socket!!.sendCloseFrame().await()
+        }
+        project.scope.launch {
+            restartConnection()
+        }
     }
 
     private fun setup() {
@@ -183,7 +228,7 @@ class GeminiLiveClient(
             }
             add(JsonObject().put("function_declarations", JsonArray(functionDeclarations)))
         }
-//        requestJson.put("tool_config", JsonObject().put("function_calling_config", JsonObject().put("mode", "ANY")))
+        //requestJson.put("tool_config", JsonObject().put("function_calling_config", JsonObject().put("mode", "ANY")))
 
         runBlocking {
             val setupConfig = JsonObject().put("setup", JsonObject().apply {
@@ -204,125 +249,101 @@ class GeminiLiveClient(
                             put("text", prompt)
                         })
                     })
-                    //put("role", "model")
+                    put("role", "model")
                 }
                 put("system_instruction", content)
                 put("tools", toolsJson)
             }).toString()
-            session.send(Frame.Text(setupConfig))
+            socket!!.sendTextFrame(setupConfig)
         }
     }
 
-    private fun readLoop(): Runnable {
-        return Runnable {
-            try {
-                while (!disposed) {
-                    val frame = runBlocking { session.incoming.receive() }
-                    when (frame) {
-                        is Frame.Binary -> {
-                            val buffer = frame.readBytes()
-                            if (buffer.isNotEmpty()) {
-                                val json = JsonObject(buffer.toString(Charsets.UTF_8))
+    override fun onOpen(websocket: WebSocket) {
+        setup()
+    }
 
-                                if (json.containsKey("serverContent")) {
-                                    if (json.getJsonObject("serverContent").getBoolean("turnComplete") == true) {
-                                        log.debug { json.toString() }
-                                        convoId++
+    override fun onClose(websocket: WebSocket, code: Int, reason: String) {
+        log.debug { "Connection closed. Code: $code, Reason: $reason" }
+    }
 
-                                        if (textResponse != null) {
-                                            val text = textResponse!!.toString()
-                                            convoListener?.invoke(text)
-                                            textResponse = null
-                                        }
-                                        continue
-                                    } else if (json.getJsonObject("serverContent").getBoolean("interrupted") == true) {
-                                        log.debug { json.toString() }
-                                        stopCurrentVoice() //todo: stop tool calls?
-                                        convoId++
-                                        continue
-                                    }
+    override fun onError(t: Throwable) {
+        log.error(t) { "Encountered error in websocket" }
+    }
 
-                                    if (clientRequestEndTime != -1L) {
-                                        project.service<VoqalConfigService>().getAiProvider().asObservabilityProvider()
-                                            .logStmLatency(System.currentTimeMillis() - clientRequestEndTime)
-                                        clientRequestEndTime = -1L
-                                    }
+    override fun onBinaryFrame(buffer: ByteArray, finalFragment: Boolean, rsv: Int) {
+        val json = JsonObject(buffer.toString(Charsets.UTF_8))
 
-                                    val parts = json.getJsonObject("serverContent").getJsonObject("modelTurn")
-                                        .getJsonArray("parts")
-                                    if (parts.size() > 1) {
-                                        log.warn { "Multiple parts not yet supported. Using first only" }
-                                    }
+        if (json.containsKey("serverContent")) {
+            if (json.getJsonObject("serverContent").getBoolean("turnComplete") == true) {
+                log.debug { json.toString() }
+                convoId++
 
-                                    val part = parts.getJsonObject(0)
-                                    if (part.containsKey("text")) {
-                                        if (textResponse == null) {
-                                            textResponse = StringWriter()
-                                        }
-                                        textResponse!!.append(part.getString("text"))
-                                    } else {
-                                        val convoId = convoId.toString() //json.getString("item_id")
-                                        val realtimeAudio = realtimeAudioMap.getOrPut(convoId) {
-                                            RealtimeAudio(project, convoId)
-                                        }
-                                        realtimeAudio.addAudioData(part)
-                                        convoListener?.invoke("audio response")
-                                    }
-                                } else if (json.containsKey("setupComplete")) {
-                                    log.debug { "Setup complete" }
-                                    setupComplete = true
-                                } else if (json.containsKey("toolCall")) {
-                                    if (clientRequestEndTime != -1L) {
-                                        project.service<VoqalConfigService>().getAiProvider().asObservabilityProvider()
-                                            .logStmLatency(System.currentTimeMillis() - clientRequestEndTime)
-                                        clientRequestEndTime = -1L
-                                    }
-
-                                    log.debug { json }
-                                    val functionCalls = json.getJsonObject("toolCall").getJsonArray("functionCalls")
-                                    val convoId = convoId.toString()//json.getString("item_id")
-                                    val realtimeTool = realtimeToolMap.getOrPut(convoId) {
-                                        RealtimeTool(project, session, convoId)
-                                    }
-                                    realtimeTool.executeTool(functionCalls.getJsonObject(0)) //todo: multiple tools
-                                    convoListener?.invoke("tool response")
-                                } else {
-                                    log.warn { "Unexpected binary frame: $json" }
-                                }
-                            } else {
-                                log.warn { "Empty binary frame" }
-                            }
-                        }
-
-                        is Frame.Close -> {
-                            log.info { "Connection closed" }
-                            break
-                        }
-
-                        else -> log.warn { "Unexpected frame: $frame" }
-                    }
+                if (textResponse != null) {
+                    val text = textResponse!!.toString()
+                    convoListener?.invoke(text)
+                    textResponse = null
                 }
-            } catch (_: ClosedReceiveChannelException) {
-                runBlocking {
-                    val closeReason = session.closeReason.await()?.message ?: "Unknown"
-                    log.debug { "Connection closed. Reason: $closeReason" }
-
-                    if (closeReason.contains("Quota exceeded") == true) {
-                        log.debug { "Quota exceeded. Restarting connection in 5 seconds..." }
-                        delay(5000)
-                    }
-                }
-            } catch (_: InterruptedException) {
-            } catch (_: InterruptedIOException) {
-            } catch (e: Exception) {
-                log.error(e) { "Error processing read: ${e.message}" }
-            } finally {
-                if (!disposed) {
-                    project.scope.launch {
-                        restartConnection()
-                    }
-                }
+                turnComplete = true
+                return
+            } else if (json.getJsonObject("serverContent").getBoolean("interrupted") == true) {
+                log.debug { json.toString() }
+                stopCurrentVoice() //todo: stop tool calls?
+                convoId++
+                turnComplete = true
+                return
             }
+            turnComplete = false
+
+            if (clientRequestEndTime != -1L) {
+                project.service<VoqalConfigService>().getAiProvider().asObservabilityProvider()
+                    .logStmLatency(System.currentTimeMillis() - clientRequestEndTime)
+                clientRequestEndTime = -1L
+            }
+
+            val parts = json.getJsonObject("serverContent").getJsonObject("modelTurn")
+                .getJsonArray("parts")
+            if (parts.size() > 1) {
+                log.warn { "Multiple parts not yet supported. Using first only" }
+            }
+
+            val part = parts.getJsonObject(0)
+            if (part.containsKey("text")) {
+                if (textResponse == null) {
+                    textResponse = StringWriter()
+                }
+                textResponse!!.append(part.getString("text"))
+            } else {
+                val convoId = convoId.toString() //json.getString("item_id")
+                val realtimeAudio = realtimeAudioMap.getOrPut(convoId) {
+                    RealtimeAudio(project, convoId)
+                }
+                realtimeAudio.addAudioData(part)
+                convoListener?.invoke("audio response")
+            }
+        } else if (json.containsKey("setupComplete")) {
+            log.debug { "Setup complete" }
+            setupComplete = true
+        } else if (json.containsKey("toolCall")) {
+            turnComplete = false
+            if (clientRequestEndTime != -1L) {
+                project.service<VoqalConfigService>().getAiProvider().asObservabilityProvider()
+                    .logStmLatency(System.currentTimeMillis() - clientRequestEndTime)
+                clientRequestEndTime = -1L
+            }
+
+            log.debug { json }
+            val functionCalls = json.getJsonObject("toolCall").getJsonArray("functionCalls")
+            val convoId = convoId.toString()//json.getString("item_id")
+            val realtimeTool = realtimeToolMap.getOrPut(convoId) {
+                RealtimeTool(project, AsyncSession(), convoId)
+            }
+            realtimeTool.executeTool(functionCalls.getJsonObject(0)) //todo: multiple tools
+            convoListener?.invoke("tool response")
+            if (functionCalls.size() > 1) {
+                println("here")
+            }
+        } else {
+            log.warn { "Unexpected binary frame: $json" }
         }
     }
 
@@ -340,36 +361,41 @@ class GeminiLiveClient(
                         break
                     }
 
-                    if (buffer === SharedAudioCapture.EMPTY_BUFFER) {
-//                        log.debug { "No speech detected, flushing stream" }
-//                        runBlocking {
-//                            session.send(Frame.Text(JsonObject().apply {
-//                                put("mediaChunks", JsonArray().apply {
-//                                    add(JsonObject().apply {
-//                                        put("mimeType", "audio/pcm;rate=16000")
-//                                        put("data", "")
-//                                    })
-//                                })
-//                            }.toString()))
-//                        }
-                    } else {
-                        runBlocking {
-                            val json = JsonObject().put("realtimeInput", JsonObject().apply {
-                                put("mediaChunks", JsonArray().apply {
-                                    add(JsonObject().apply {
-                                        put("mimeType", "audio/pcm;rate=16000")
-                                        put("data", Base64.getEncoder().encodeToString(buffer))
-                                    })
+                    runBlocking {
+                        val json = JsonObject().put("realtimeInput", JsonObject().apply {
+                            put("mediaChunks", JsonArray().apply {
+                                add(JsonObject().apply {
+                                    put("mimeType", "audio/pcm;rate=16000")
+                                    put("data", Base64.getEncoder().encodeToString(buffer))
                                 })
                             })
-                            session.send(Frame.Text(json.toString()))
-                        }
+                        })
+                        socket!!.sendTextFrame(json.toString())
                     }
                 }
             } catch (_: InterruptedException) {
             } catch (_: CancellationException) {
             } catch (e: Exception) {
                 log.error(e) { "Error processing write: ${e.message}" }
+            }
+        }
+    }
+
+    private fun updateSessionLoop(): Runnable {
+        return Runnable {
+            try {
+                while (!disposed) {
+                    try {
+                        updateSession()
+                    } catch (e: PebbleException) {
+                        log.warn { "Failed to update session: ${e.message}" }
+                    }
+                    runBlocking { delay(500) }
+                }
+            } catch (_: InterruptedException) {
+            } catch (_: CancellationException) {
+            } catch (e: Exception) {
+                log.error(e) { "Error processing session update: ${e.message}" }
             }
         }
     }
@@ -391,13 +417,13 @@ class GeminiLiveClient(
                             put("text", request.messages.last().content)
                         })
                     })
-                    //put("role", "model")
+                    put("role", "model")
                 })
             })
             put("turn_complete", true)
         })
         clientRequestEndTime = System.currentTimeMillis()
-        session.send(Frame.Text(json.toString()))
+        socket!!.sendTextFrame(json.toString())
 
         val convoResponse = promise.future().coAwait()
         val toolCall = if (convoResponse in listOf("audio response", "tool response")) {
@@ -459,9 +485,80 @@ class GeminiLiveClient(
 
     override fun dispose() {
         disposed = true
-        if (::session.isInitialized) {
-            runBlocking { session.close(CloseReason(CloseReason.Codes.NORMAL, "Disposed")) }
-        }
+//        if (::session.isInitialized) {
+//            runBlocking { session.close(CloseReason(CloseReason.Codes.NORMAL, "Disposed")) }
+//        }
         if (::writeThread.isInitialized) writeThread.interrupt()
+    }
+
+    private inner class AsyncSession : DefaultWebSocketSession {
+        override val closeReason: Deferred<CloseReason?>
+            get() = throw UnsupportedOperationException()
+        override var pingIntervalMillis: Long
+            get() = throw UnsupportedOperationException()
+            set(value) {
+                throw UnsupportedOperationException()
+            }
+        override var timeoutMillis: Long
+            get() = throw UnsupportedOperationException()
+            set(value) {
+                throw UnsupportedOperationException()
+            }
+
+        @InternalAPI
+        override fun start(negotiatedExtensions: List<WebSocketExtension<*>>) {
+            throw UnsupportedOperationException()
+        }
+
+        override val extensions: List<WebSocketExtension<*>>
+            get() = throw UnsupportedOperationException()
+        override val incoming: ReceiveChannel<Frame>
+            get() = throw UnsupportedOperationException()
+        override var masking: Boolean
+            get() = throw UnsupportedOperationException()
+            set(value) {
+                throw UnsupportedOperationException()
+            }
+        override var maxFrameSize: Long
+            get() = throw UnsupportedOperationException()
+            set(value) {
+                throw UnsupportedOperationException()
+            }
+        override val outgoing: SendChannel<Frame>
+            get() = object : SendChannel<Frame> {
+                @DelicateCoroutinesApi
+                override val isClosedForSend: Boolean
+                    get() = throw UnsupportedOperationException()
+                override val onSend: SelectClause2<Frame, SendChannel<Frame>>
+                    get() = throw UnsupportedOperationException()
+
+                override fun close(cause: Throwable?): Boolean {
+                    throw UnsupportedOperationException()
+                }
+
+                override fun invokeOnClose(handler: (Throwable?) -> Unit) {
+                    throw UnsupportedOperationException()
+                }
+
+                override suspend fun send(element: Frame) {
+                    socket!!.sendBinaryFrame(element.data)
+                }
+
+                override fun trySend(element: Frame): ChannelResult<Unit> {
+                    throw UnsupportedOperationException()
+                }
+            }
+
+        override suspend fun flush() {
+            throw UnsupportedOperationException()
+        }
+
+        @Deprecated("Use cancel() instead.", replaceWith = ReplaceWith("cancel()", "kotlinx.coroutines.cancel"))
+        override fun terminate() {
+            throw UnsupportedOperationException()
+        }
+
+        override val coroutineContext: CoroutineContext
+            get() = throw UnsupportedOperationException()
     }
 }

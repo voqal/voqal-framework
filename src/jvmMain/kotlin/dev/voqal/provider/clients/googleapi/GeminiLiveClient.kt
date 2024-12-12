@@ -397,6 +397,7 @@ class GeminiLiveClient(
             })
             put("turn_complete", true)
         })
+        speechEndTime = System.currentTimeMillis()
         session.send(Frame.Text(json.toString()))
 
         val convoResponse = promise.future().coAwait()

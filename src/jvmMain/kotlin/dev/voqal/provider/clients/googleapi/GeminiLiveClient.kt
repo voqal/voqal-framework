@@ -29,13 +29,15 @@ import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.InterruptedIOException
+import java.io.StringWriter
 import java.util.*
 import java.util.concurrent.LinkedBlockingQueue
 
 class GeminiLiveClient(
     override val name: String,
     private val project: Project,
-    private val providerKey: String
+    private val providerKey: String,
+    private val modelName: String
 ) : LlmProvider, StmProvider, SharedAudioCapture.AudioDataListener {
 
     private val log = project.getVoqalLogger(this::class)
@@ -60,6 +62,8 @@ class GeminiLiveClient(
     private var currentInputTokens = 0
     private var setupComplete = false
     private var convoListener: ((String) -> Unit)? = null
+    private var convoId = 0
+    private var textResponse: StringWriter? = null
 
     init {
         //todo: gemini live only supports server vad
@@ -86,6 +90,9 @@ class GeminiLiveClient(
         setupComplete = false
 
         try {
+            if (::session.isInitialized) {
+                session.cancel()
+            }
             session = runBlocking {
                 //establish connection, 3 attempts
                 var session: DefaultClientWebSocketSession? = null
@@ -180,9 +187,10 @@ class GeminiLiveClient(
 //        requestJson.put("tool_config", JsonObject().put("function_calling_config", JsonObject().put("mode", "ANY")))
 
         runBlocking {
-            val data = JsonObject().put("setup", JsonObject().apply {
-                put("model", "models/gemini-2.0-flash-exp")
+            val setupConfig = JsonObject().put("setup", JsonObject().apply {
+                put("model", "models/$modelName")
                 put("generation_config", JsonObject().apply {
+                    //put("response_modalities", JsonArray().add("TEXT"))
                     put("speech_config", JsonObject().apply {
                         put("voice_config", JsonObject().apply {
                             put("prebuilt_voice_config", JsonObject().apply {
@@ -202,11 +210,10 @@ class GeminiLiveClient(
                 put("system_instruction", content)
                 put("tools", toolsJson)
             }).toString()
-            session.send(Frame.Text(data))
+            session.send(Frame.Text(setupConfig))
         }
     }
 
-    private var convoId = 0
     private fun readLoop(): Runnable {
         return Runnable {
             try {
@@ -222,6 +229,12 @@ class GeminiLiveClient(
                                     if (json.getJsonObject("serverContent").getBoolean("turnComplete") == true) {
                                         log.debug { json.toString() }
                                         convoId++
+
+                                        if (textResponse != null) {
+                                            val text = textResponse!!.toString()
+                                            convoListener?.invoke(text)
+                                            textResponse = null
+                                        }
                                         continue
                                     } else if (json.getJsonObject("serverContent").getBoolean("interrupted") == true) {
                                         log.debug { json.toString() }
@@ -236,12 +249,26 @@ class GeminiLiveClient(
                                         speechEndTime = -1L
                                     }
 
-                                    val convoId = convoId.toString() //json.getString("item_id")
-                                    val realtimeAudio = realtimeAudioMap.getOrPut(convoId) {
-                                        RealtimeAudio(project, convoId)
+                                    val parts = json.getJsonObject("serverContent").getJsonObject("modelTurn")
+                                        .getJsonArray("parts")
+                                    if (parts.size() > 1) {
+                                        log.warn { "Multiple parts not yet supported. Using first only" }
                                     }
-                                    realtimeAudio.addAudioData(json)
-                                    convoListener?.invoke("audio response")
+
+                                    val part = parts.getJsonObject(0)
+                                    if (part.containsKey("text")) {
+                                        if (textResponse == null) {
+                                            textResponse = StringWriter()
+                                        }
+                                        textResponse!!.append(part.getString("text"))
+                                    } else {
+                                        val convoId = convoId.toString() //json.getString("item_id")
+                                        val realtimeAudio = realtimeAudioMap.getOrPut(convoId) {
+                                            RealtimeAudio(project, convoId)
+                                        }
+                                        realtimeAudio.addAudioData(part)
+                                        convoListener?.invoke("audio response")
+                                    }
                                 } else if (json.containsKey("setupComplete")) {
                                     log.debug { "Setup complete" }
                                     setupComplete = true
@@ -372,7 +399,29 @@ class GeminiLiveClient(
         })
         session.send(Frame.Text(json.toString()))
 
-        val responseType = promise.future().coAwait()
+        val convoResponse = promise.future().coAwait()
+        val toolCall = if (convoResponse in listOf("audio response", "tool response")) {
+            ToolCall.Function(
+                id = ToolId("ignore"),
+                function = FunctionCall(
+                    nameOrNull = "ignore",
+                    argumentsOrNull = JsonObject().apply {
+                        put("transcription", "")
+                        put("ignore_reason", convoResponse)
+                    }.toString()
+                )
+            )
+        } else {
+            ToolCall.Function(
+                id = ToolId("answer_question"),
+                function = FunctionCall(
+                    nameOrNull = "answer_question",
+                    argumentsOrNull = JsonObject().apply {
+                        put("text", convoResponse.trim())
+                    }.toString()
+                )
+            )
+        }
         return ChatCompletion(
             id = "n/a",
             created = System.currentTimeMillis(),
@@ -382,12 +431,8 @@ class GeminiLiveClient(
                     index = 0,
                     ChatMessage(
                         ChatRole.Assistant,
-                        TextContent(
-                            content = JsonObject().put("ignore", JsonObject().apply {
-                                put("transcription", "")
-                                put("ignore_reason", responseType)
-                            }).toString()
-                        )
+                        messageContent = null,
+                        toolCalls = listOf(toolCall)
                     )
                 )
             )

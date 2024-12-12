@@ -42,10 +42,8 @@ class RealtimeAudio(private val project: Project, convoId: String) {
             try {
                 val data = if (json.containsKey("delta")) {
                     json.getString("delta") //OpenAI Realtime API
-                } else if (json.containsKey("serverContent")) {
-                    json.getJsonObject("serverContent").getJsonObject("modelTurn") //Gemini Live
-                        .getJsonArray("parts") //todo: multi-part?
-                        .getJsonObject(0).getJsonObject("inlineData").getString("data")
+                } else if (json.containsKey("inlineData")) {
+                    json.getJsonObject("inlineData").getString("data") //Gemini Live
                 } else {
                     throw IllegalStateException("Unknown audio data format")
                 }

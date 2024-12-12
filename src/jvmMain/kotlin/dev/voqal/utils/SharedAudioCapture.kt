@@ -379,6 +379,7 @@ class SharedAudioCapture(private val project: Project) {
                         val directiveService = project.service<VoqalDirectiveService>()
                         if (modeProvider?.isStmProvider() == true) {
                             if ((modeProvider as? AudioDataListener)?.isLiveDataListener() == true) {
+                                log.debug { "Mode provider already sent data" }
                                 continue //already sent data
                             }
 
@@ -401,6 +402,7 @@ class SharedAudioCapture(private val project: Project) {
                         } else if (aiProvider.isSttProvider()) {
                             val sttProvider = aiProvider.asSttProvider()
                             if ((sttProvider as? AudioDataListener)?.isLiveDataListener() == true) {
+                                log.debug { "STT provider already sent data" }
                                 continue //already sent data
                             }
 

@@ -61,6 +61,7 @@ kotlin {
                 implementation("javax.mail:mail:1.4.7")
                 implementation("com.microsoft.onnxruntime:onnxruntime:1.20.0")
                 implementation("io.dropwizard.metrics:metrics-core:4.2.29")
+                implementation("org.asynchttpclient:async-http-client:3.0.1")
 
                 compileOnly("com.jetbrains.intellij.platform:code-style:242.23726.103") {
                     isTransitive = false

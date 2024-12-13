@@ -13,7 +13,7 @@ import dev.voqal.config.settings.TextToSpeechSettings
 import dev.voqal.services.VoqalDirectiveService
 import org.mockito.kotlin.mock
 
-class MockDirectiveService(private val project: Project) : VoqalDirectiveService {
+open class MockDirectiveService(private val project: Project) : VoqalDirectiveService {
 
     override suspend fun handlePartialTranscription(spokenTranscript: SpokenTranscript) {
         TODO("Not yet implemented")

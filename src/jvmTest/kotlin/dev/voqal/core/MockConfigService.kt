@@ -13,11 +13,14 @@ import io.github.oshai.kotlinlogging.KLogger
 import io.github.oshai.kotlinlogging.KotlinLogging
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.GlobalScope
+import org.mockito.kotlin.mock
 import kotlin.reflect.KClass
 
 open class MockConfigService(
     private val project: Project
 ) : VoqalConfigService {
+
+    private var config = VoqalConfig()
 
     override fun invokeLater(action: () -> Unit) {
         TODO("Not yet implemented")
@@ -36,7 +39,7 @@ open class MockConfigService(
     }
 
     override fun getSharedAudioCapture(): SharedAudioCapture {
-        TODO("Not yet implemented")
+        return mock<SharedAudioCapture> {}
     }
 
     override fun onConfigChange(disposable: Disposable?, listener: (VoqalConfig) -> Unit) {
@@ -48,7 +51,7 @@ open class MockConfigService(
     }
 
     override fun getConfig(): VoqalConfig {
-        return VoqalConfig()
+        return config
     }
 
     override fun getAiProvider(): AiProvider {
@@ -64,7 +67,7 @@ open class MockConfigService(
     }
 
     override fun setCachedConfig(config: VoqalConfig) {
-        TODO("Not yet implemented")
+        this.config = config
     }
 
     override fun getPromptSettings(promptName: String): PromptSettings {
@@ -84,7 +87,11 @@ open class MockConfigService(
     }
 
     override fun getPromptTemplate(promptSettings: PromptSettings): String {
-        return ""
+        if (promptSettings.provider == PromptSettings.PProvider.CUSTOM_TEXT) {
+            return promptSettings.promptText
+        } else {
+            TODO("Not yet implemented")
+        }
     }
 
     override fun getPromptTemplate(promptName: String): String {

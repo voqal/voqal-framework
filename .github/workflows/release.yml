@@ -2,14 +2,22 @@ name: Release framework
 
 on:
   release:
-    types: [published]
+    types: [ published ]
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:

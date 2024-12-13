@@ -15,7 +15,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.GlobalScope
 import kotlin.reflect.KClass
 
-class MockConfigService(
+open class MockConfigService(
     private val project: Project
 ) : VoqalConfigService {
 

@@ -359,6 +359,37 @@ object ResponseParser {
         return VoqalResponse(directive, message.toolCalls ?: emptyList(), completion)
     }
 
+    fun parseDirectiveArray(jsonBlock: String): List<ToolCallChunk>? {
+        val jsonArray = try {
+            JsonArray(CodeExtractor.extractCodeBlock(jsonBlock))
+        } catch (_: Exception) {
+            return null
+        }
+
+        return jsonArray.mapNotNull {
+            val tool = it as JsonObject
+            val name = tool.fieldNames().first()
+
+            if (tool.fieldNames().size != 1) {
+                return@mapNotNull null
+            } else if (tool.getJsonObject(name).fieldNames().size != 1) {
+                return@mapNotNull null
+            } else if (!tool.getJsonObject(name).containsKey("directive")) {
+                return@mapNotNull null
+            }
+
+            ToolCallChunk(
+                index = 0,
+                type = "function",
+                id = ToolId(name),
+                function = FunctionCall(
+                    nameOrNull = name,
+                    argumentsOrNull = tool.getJsonObject(name).toString()
+                )
+            )
+        }.takeIf { it.isNotEmpty() }
+    }
+
     fun parseToolCallChunk(jsonBlock: String): ToolCallChunk? {
         val json = try {
             JsonObject(jsonBlock)
@@ -388,6 +419,17 @@ object ResponseParser {
                 function = FunctionCall(
                     nameOrNull = json.getString("name"),
                     argumentsOrNull = json.getJsonObject("parameters").toString()
+                )
+            )
+        } else if (json.fieldNames().size == 1) {
+            val name = json.fieldNames().first()
+            return ToolCallChunk(
+                index = 0,
+                type = "function",
+                id = ToolId(name),
+                function = FunctionCall(
+                    nameOrNull = name,
+                    argumentsOrNull = json.getJsonObject(name).toString()
                 )
             )
         } else {

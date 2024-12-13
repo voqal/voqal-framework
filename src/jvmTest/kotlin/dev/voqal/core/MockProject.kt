@@ -18,6 +18,7 @@ class MockProject : Project {
     var toolService = MockToolService()
     var configService = MockConfigService(this)
     var voiceService = MockVoiceService()
+    var contextService = MockContextService()
 
     override fun <T : Any?> getUserData(key: Key<T>): T? {
         TODO("Not yet implemented")
@@ -70,6 +71,8 @@ class MockProject : Project {
             return chatToolWindowContentManager as T
         } else if (serviceClass == VoqalConfigService::class.java) {
             return configService as T
+        } else if (serviceClass == VoqalContextService::class.java) {
+            return contextService as T
         } else {
             throw IllegalArgumentException("Service not found")
         }

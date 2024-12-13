@@ -21,7 +21,7 @@ class WithLineNumbersExtension : AbstractExtension() {
             self: PebbleTemplate,
             context: EvaluationContext,
             lineNumber: Int
-        ): Any? {
+        ): Any {
             val text = args["text"] as? String ?: return ""
             return text.lines()
                 .mapIndexed { index, line -> "${index + 1}|$line" }

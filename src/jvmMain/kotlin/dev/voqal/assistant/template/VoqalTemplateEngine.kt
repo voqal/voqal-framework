@@ -6,10 +6,12 @@ import io.pebbletemplates.pebble.extension.Extension
 import io.pebbletemplates.pebble.lexer.Syntax
 import io.pebbletemplates.pebble.loader.StringLoader
 import io.pebbletemplates.pebble.template.PebbleTemplate
+import java.io.File
 
 class VoqalTemplateEngine {
 
     companion object {
+        var libraryDir = File(File(System.getProperty("java.io.tmpdir")), "voqal-library")
         val customExtensions: MutableList<Extension> = mutableListOf()
 
         private val ENGINE by lazy {

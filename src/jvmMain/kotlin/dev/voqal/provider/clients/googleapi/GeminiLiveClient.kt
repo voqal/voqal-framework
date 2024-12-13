@@ -35,7 +35,8 @@ import java.util.concurrent.LinkedBlockingQueue
 class GeminiLiveClient(
     override val name: String,
     private val project: Project,
-    private val providerKey: String
+    private val providerKey: String,
+    private val modelName: String
 ) : LlmProvider, StmProvider, SharedAudioCapture.AudioDataListener {
 
     private val log = project.getVoqalLogger(this::class)
@@ -181,7 +182,7 @@ class GeminiLiveClient(
 
         runBlocking {
             val data = JsonObject().put("setup", JsonObject().apply {
-                put("model", "models/gemini-2.0-flash-exp")
+                put("model", "models/$modelName")
                 put("generation_config", JsonObject().apply {
                     put("speech_config", JsonObject().apply {
                         put("voice_config", JsonObject().apply {

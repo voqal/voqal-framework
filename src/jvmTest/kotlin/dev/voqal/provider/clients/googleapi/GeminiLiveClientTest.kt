@@ -10,15 +10,14 @@ import dev.voqal.config.settings.PromptSettings
 import dev.voqal.core.MockDirectiveService
 import dev.voqal.core.MockProject
 import dev.voqal.utils.SharedAudioCapture
+import dev.voqal.utils.SharedAudioCapture.Companion.extractPcmData
 import io.vertx.core.Promise
 import io.vertx.kotlin.coroutines.coAwait
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.kotlin.mock
-import java.io.ByteArrayOutputStream
 import java.io.File
-import javax.sound.sampled.AudioSystem
 
 class GeminiLiveClientTest {
 
@@ -107,18 +106,5 @@ class GeminiLiveClientTest {
 
         val responseText2 = secondResponse.future().coAwait()
         assertTrue(responseText2.contains("10:11 AM"))
-    }
-
-    fun extractPcmData(wavFile: File): ByteArray {
-        AudioSystem.getAudioInputStream(wavFile).use { audioInputStream ->
-            val buffer = ByteArray(4096)
-            val output = ByteArrayOutputStream()
-
-            var bytesRead: Int
-            while (audioInputStream.read(buffer).also { bytesRead = it } != -1) {
-                output.write(buffer, 0, bytesRead)
-            }
-            return output.toByteArray()
-        }
     }
 }

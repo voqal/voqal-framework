@@ -66,6 +66,19 @@ class SharedAudioCapture(private val project: Project) {
 
             return outputStream.toByteArray()
         }
+
+        fun extractPcmData(wavFile: File): ByteArray {
+            AudioSystem.getAudioInputStream(wavFile).use { audioInputStream ->
+                val buffer = ByteArray(4096)
+                val output = ByteArrayOutputStream()
+
+                var bytesRead: Int
+                while (audioInputStream.read(buffer).also { bytesRead = it } != -1) {
+                    output.write(buffer, 0, bytesRead)
+                }
+                return output.toByteArray()
+            }
+        }
     }
 
     private val log = project.getVoqalLogger(this::class)

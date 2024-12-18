@@ -97,8 +97,8 @@ kotlin {
                 implementation("io.vertx:vertx-junit5:4.5.11")
                 implementation("org.jooq:joor:0.9.15")
 
-                implementation("org.junit.jupiter:junit-jupiter-api:5.11.3")
-                runtimeOnly("org.junit.jupiter:junit-jupiter-engine:5.11.3")
+                implementation("org.junit.jupiter:junit-jupiter-api:5.11.4")
+                runtimeOnly("org.junit.jupiter:junit-jupiter-engine:5.11.4")
                 implementation(libs.mockito.kotlin)
                 implementation("io.ktor:ktor-server-websockets:2.3.13")
                 implementation("io.ktor:ktor-server-netty:2.3.13")

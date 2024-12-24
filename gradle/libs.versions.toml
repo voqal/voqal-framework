@@ -11,13 +11,13 @@ commons-io = "2.18.0"
 pebble = "3.2.2"
 jtokkit = "1.1.0"
 libfvad-jni = "1.0.0"
-vertexai = "1.14.0"
+vertexai = "1.15.0"
 mockito-kotlin = "5.4.0"
 snakeyaml = "2.3"
-jna = "5.15.0"
-guava = "33.3.1-jre"
+jna = "5.16.0"
+guava = "33.4.0-jre"
 kotlin-logging-jvm = "7.0.3"
-logback-classic = "1.5.12"
+logback-classic = "1.5.15"
 
 [libraries]
 vertx-core = { module = "io.vertx:vertx-core", version.ref = "vertx" }

@@ -87,10 +87,10 @@ open class MockConfigService(
     }
 
     override fun getPromptTemplate(promptSettings: PromptSettings): String {
-        if (promptSettings.provider == PromptSettings.PProvider.CUSTOM_TEXT) {
-            return promptSettings.promptText
+        return if (promptSettings.provider == PromptSettings.PProvider.CUSTOM_TEXT) {
+            promptSettings.promptText
         } else {
-            TODO("Not yet implemented")
+            ""
         }
     }
 
